@@ -1,7 +1,7 @@
 ---
 title: 'Overview of Results Thus Far ...'
-# output: pdf_document
-output: html_document
+output: pdf_document
+# output: html_document
 # geometry: "left=1cm,right=1cm,top=1cm,bottom=1.5cm"
 urlcolor: blue
 header-includes:
@@ -217,3 +217,31 @@ optimization problem, but they note that it is a semidefinite programming
 problem. 
 
 [^semidef_relax]: https://arxiv.org/pdf/1806.11429.pdf
+
+Going back to the counterexample graph from before[^counterexample], we have the 
+following facts:
+
+* The characteristic polynomial equation for the graph Laplacian is 
+$\lambda (\lambda^3 - (4 - 2 \epsilon) \lambda^2 + 
+(e + 7 \epsilon) \lambda - 4 \epsilon) = 0$[^error]. This has one obvious root 
+at $\lambda_0 = 0$, as expected, and the other roots are difficult to parse. 
+* It can be shown that $[H^\top L H]_{ii} = \frac{W(C_i, C_i^c)}{n_i}$, so the 
+trace works out nicely to the ratio cut objective. This statement is true in 
+general, not just for this particular graph.
+* I could not find any such relationship for $H^\top L^\dagger H$. The 
+following can be shown:
+    * For the 1-2 cut, 
+    $[H^\top L^\dagger H]_{11} = \frac{5}{16} + \frac{9}{16 \epsilon}$, and 
+    $[H^\top L^\dagger H]_{22} = \frac{5}{48} + \frac{3}{16 \epsilon}$.
+    * For the 2-3 cut, 
+    $[H^\top L^\dagger H]_{11} = \frac{5}{8} + \frac{1}{8 \epsilon}$, and 
+    $[H^\top L^\dagger H]_{22} = \frac{5}{8} + \frac{1}{8 \epsilon}$.
+    * For the 3-4 cut, 
+    $[H^\top L^\dagger H]_{11} = \frac{13}{48} + \frac{1}{48 \epsilon}$, and 
+    $[H^\top L^\dagger H]_{22} = \frac{13}{16} + \frac{1}{16 \epsilon}$.
+* $(H^\top L H)^\dagger = c (H^\top L^\dagger H)$ for some positive constant c. 
+Similarly, $(H^\top L^\dagger H)^\dagger = c' (H^\top L H)$. So 
+$\arg\min_H \tr(H^\top L H) = \arg\min_H \tr((H^\top L^\dagger H)^\dagger)$ and 
+$\arg\max_H \tr(H^\top L^\dagger H) = \arg\max_H \tr((H^\top L H)^\dagger)$.
+
+[^error]: I believe there's an error in the textbook
