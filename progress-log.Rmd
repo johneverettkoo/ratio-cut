@@ -173,7 +173,7 @@ $\implies \lambda_1 - \lambda_3 \leq 0$ and $\lambda_2 - \lambda_3 \leq 0$.
 For arbitrary $r$, we have the statement
 
 $$\sum_i^{r-1} (\lambda_i - \lambda_r) (p_i - q_i) \leq 0 \iff
-\sum_i^{r-1} (\prod_{j \neq i} \lambda_i) (\lambda_i - \lambda_r) (p_i - q_i)
+\sum_i^{r-1} (\prod_{j \neq i} \lambda_j) (\lambda_i - \lambda_r) (p_i - q_i)
   \leq 0$$
   
 Some possible solutions can be ascertained, but it's difficult to relate those 
@@ -239,9 +239,11 @@ following can be shown:
     * For the 3-4 cut, 
     $[H^\top L^\dagger H]_{11} = \frac{13}{48} + \frac{1}{48 \epsilon}$, and 
     $[H^\top L^\dagger H]_{22} = \frac{13}{16} + \frac{1}{16 \epsilon}$.
-* $(H^\top L H)^\dagger = c (H^\top L^\dagger H)$ for some positive constant c. 
-Similarly, $(H^\top L^\dagger H)^\dagger = c' (H^\top L H)$. So 
-$\arg\min_H \tr(H^\top L H) = \arg\min_H \tr((H^\top L^\dagger H)^\dagger)$ and 
-$\arg\max_H \tr(H^\top L^\dagger H) = \arg\max_H \tr((H^\top L H)^\dagger)$.
+* $(H^\top L H)^\dagger = f(\epsilon) (H^\top L^\dagger H)$.
+Similarly, $(H^\top L^\dagger H)^\dagger = g(\epsilon) (H^\top L H)$. So 
+$\arg\min_H \tr(H^\top L H) = 
+\arg\min_H g(\epsilon) \tr((H^\top L^\dagger H)^\dagger)$ and 
+$\arg\max_H \tr(H^\top L^\dagger H) = 
+f(\epsilon) \arg\max_H \tr((H^\top L H)^\dagger)$.
 
 [^error]: I believe there's an error in the textbook
