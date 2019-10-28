@@ -251,5 +251,9 @@ $\arg\min_H \tr(H^\top L H) =
 \arg\min_H g(\epsilon) \tr((H^\top L^\dagger H)^\dagger)$ and 
 $\arg\max_H \tr(H^\top L^\dagger H) = 
 \arg\max_H f(\epsilon) \tr((H^\top L H)^\dagger)$.
+* $H^\dagger = H^\top$, so $(H^\top L H)^\dagger = H^\top L^\dagger H$. So 
+perhaps we can extract information from the forms of the eigenvalues of 
+$H^\top L H$.
 
 [^error]: I believe there's an error in the textbook
+
