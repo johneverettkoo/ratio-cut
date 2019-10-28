@@ -1,7 +1,7 @@
 ---
 title: 'Overview of Results Thus Far ...'
-# output: pdf_document
-output: html_document
+output: pdf_document
+# output: html_document
 # geometry: "left=1cm,right=1cm,top=1cm,bottom=1.5cm"
 urlcolor: blue
 header-includes:
@@ -223,7 +223,7 @@ following facts:
 
 * The characteristic polynomial equation for the graph Laplacian is 
 $\lambda (\lambda^3 - (4 - 2 \epsilon) \lambda^2 + 
-(e + 7 \epsilon) \lambda - 4 \epsilon) = 0$[^error]. This has one obvious root 
+(3 + 7 \epsilon) \lambda - 4 \epsilon) = 0$[^error]. This has one obvious root 
 at $\lambda_0 = 0$, as expected, and the other roots are difficult to parse. 
 * It can be shown that $[H^\top L H]_{ii} = \frac{W(C_i, C_i^c)}{n_i}$, so the 
 trace works out nicely to the ratio cut objective. This statement is true in 
