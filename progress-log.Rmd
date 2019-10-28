@@ -1,7 +1,7 @@
 ---
 title: 'Overview of Results Thus Far ...'
-output: pdf_document
-# output: html_document
+# output: pdf_document
+output: html_document
 # geometry: "left=1cm,right=1cm,top=1cm,bottom=1.5cm"
 urlcolor: blue
 header-includes:
@@ -204,12 +204,18 @@ as $\sigma$ increases, Lloyd's algorithm has more difficulty in finding the
 global optimum. One proposed workaround is to set $\sigma$ to a smaller value 
 and perform Lloyd's algorithm on the partial embedding. 
 
+An interesting note: Let $K(\sigma) = \sigma I - L$ for some
+$\sigma \geq \lambda_{n-1}$. Let $\Delta_2(\sigma) = \kappa(K(\sigma))$. Then 
+for $i \neq j$, 
+$[\Delta_2(\sigma_1)]_{ij} = [\Delta_2(\sigma_2)]_{ij} + 2(\sigma_1 - \sigma_2)$
+so they have equivalent $k$-means solutions.
+
 [^kernelkmeans]: http://people.bu.edu/bkulis/pubs/spectral_techreport.pdf
 
 ## Misc.
 
 Ling and Strohmer[^semidef_relax] showed that if we change the relaxation from 
-$H^\top H = I$ to $H^\top H = I$ and $h_{ij} \geq 0$ $i <= n$, 
+$H^\top H = I$ to $H^\top H = I$ and $h_{ij} \geq 0$ $i \leq n$, 
 $j \leq k$, there exists a condition under which performing $k$-means 
 clustering on the embedding induced by $H^* = \arg\min_H \tr(H^\top L H)$ 
 results in the solution to ratio cut. They do not provide a solution to this 
