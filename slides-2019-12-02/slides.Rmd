@@ -358,7 +358,7 @@ qgraph(W)
 * We have a qualitative *a priori* clustering in mind based on the picture of 
 the graph (and also the spirals)
 * Note that *our* idea of an ideal clustering may not agree with the ratio cut 
-metric, $Tr(N^{-1/2} H^\top L H N^{-1/2})$
+metric, $\tr(N^{-1/2} H^\top L H N^{-1/2})$
 * Ratio cut metric provides an easy way to compare clusterings
 * Ratio cut metric based on *a priori* clustering: 0.08
 
@@ -597,7 +597,7 @@ clustering while the unscaled embedding did (until $d > 268$)
 
 Alternative kernel $k$-means formulation[^1]:
 
-$$argmax_H \bigg\{ Tr(N^{-1/2} H^\top (cI - L) H N^{-1/2}) \bigg\}$$ 
+$$\arg\max_H \bigg\{ \tr(N^{-1/2} H^\top (cI - L) H N^{-1/2}) \bigg\}$$ 
 
 * $I$ is the $n \times n$ identity matrix
 * $c \in \mathbb{R}$ is some parameter
@@ -608,18 +608,18 @@ $$argmax_H \bigg\{ Tr(N^{-1/2} H^\top (cI - L) H N^{-1/2}) \bigg\}$$
 
 Kernel $k$-means criterion with kernel matrix $cI - L$:
 
-$$argmax_H \bigg\{ Tr(N^{-1/2} H^\top (cI - L) H N^{-1/2}) \bigg\}$$ 
+$$\arg\max_H \bigg\{ \tr(N^{-1/2} H^\top (cI - L) H N^{-1/2}) \bigg\}$$ 
 
-$Tr(N^{-1/2} H^\top (cI - L) H N^{-1/2})$  
-$= Tr(N^{-1/2} H^\top (cI) H N^{-1/2} - N^{-1/2} H^\top L H N^{-1/2})$  
-$= Tr(N^{-1/2} H^\top (cI) H N^{-1/2}) - Tr(N^{-1/2} H^\top L H N^{-1/2})$  
-$= c Tr(N^{-1/2} H^\top H N^{-1/2}) - Tr(N^{-1/2} H^\top L H N^{-1/2})$  
-$= c Tr(I_k) - Tr(N^{-1/2} H^\top L H N^{-1/2})$  
-$= ck - Tr(N^{-1/2} H^\top L H N^{-1/2})$
+$\tr(N^{-1/2} H^\top (cI - L) H N^{-1/2})$  
+$= \tr(N^{-1/2} H^\top (cI) H N^{-1/2} - N^{-1/2} H^\top L H N^{-1/2})$  
+$= \tr(N^{-1/2} H^\top (cI) H N^{-1/2}) - \tr(N^{-1/2} H^\top L H N^{-1/2})$  
+$= c \tr(N^{-1/2} H^\top H N^{-1/2}) - \tr(N^{-1/2} H^\top L H N^{-1/2})$  
+$= c \tr(I_k) - \tr(N^{-1/2} H^\top L H N^{-1/2})$  
+$= ck - \tr(N^{-1/2} H^\top L H N^{-1/2})$
 
 So this is equivalent to:
 
-$$argmin_H \bigg\{ Tr(N^{-1/2} H^\top L H N^{-1/2}) \bigg\}$$ 
+$$\arg\min_H \bigg\{ \tr(N^{-1/2} H^\top L H N^{-1/2}) \bigg\}$$ 
 
 # Alternative Approaches 
 

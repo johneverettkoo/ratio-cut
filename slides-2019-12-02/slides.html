@@ -559,7 +559,7 @@ Let <span class="math inline">\(K: \mathbb{R}^q \times \mathbb{R}^q \to \mathbb{
 <ul>
 <li>Set <span class="math inline">\(k = 2\)</span></li>
 <li>We have a qualitative <em>a priori</em> clustering in mind based on the picture of the graph (and also the spirals)</li>
-<li>Note that <em>our</em> idea of an ideal clustering may not agree with the ratio cut metric, <span class="math inline">\(Tr(N^{-1/2} H^\top L H N^{-1/2})\)</span></li>
+<li>Note that <em>our</em> idea of an ideal clustering may not agree with the ratio cut metric, <span class="math inline">\(\text{Tr}(N^{-1/2} H^\top L H N^{-1/2})\)</span></li>
 <li>Ratio cut metric provides an easy way to compare clusterings</li>
 <li>Ratio cut metric based on <em>a priori</em> clustering: 0.08</li>
 </ul>
@@ -618,7 +618,7 @@ Let <span class="math inline">\(K: \mathbb{R}^q \times \mathbb{R}^q \to \mathbb{
 <div id="alternative-approaches" class="slide section level1">
 <h1>Alternative Approaches</h1>
 <p>Alternative kernel <span class="math inline">\(k\)</span>-means formulation<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a>:</p>
-<p><span class="math display">\[argmax_H \bigg\{ Tr(N^{-1/2} H^\top (cI - L) H N^{-1/2}) \bigg\}\]</span></p>
+<p><span class="math display">\[\arg\max_H \bigg\{ \text{Tr}(N^{-1/2} H^\top (cI - L) H N^{-1/2}) \bigg\}\]</span></p>
 <ul>
 <li><span class="math inline">\(I\)</span> is the <span class="math inline">\(n \times n\)</span> identity matrix</li>
 <li><span class="math inline">\(c \in \mathbb{R}\)</span> is some parameter</li>
@@ -627,15 +627,15 @@ Let <span class="math inline">\(K: \mathbb{R}^q \times \mathbb{R}^q \to \mathbb{
 <div id="alternative-approaches-1" class="slide section level1">
 <h1>Alternative Approaches</h1>
 <p>Kernel <span class="math inline">\(k\)</span>-means criterion with kernel matrix <span class="math inline">\(cI - L\)</span>:</p>
-<p><span class="math display">\[argmax_H \bigg\{ Tr(N^{-1/2} H^\top (cI - L) H N^{-1/2}) \bigg\}\]</span></p>
-<p><span class="math inline">\(Tr(N^{-1/2} H^\top (cI - L) H N^{-1/2})\)</span><br />
-<span class="math inline">\(= Tr(N^{-1/2} H^\top (cI) H N^{-1/2} - N^{-1/2} H^\top L H N^{-1/2})\)</span><br />
-<span class="math inline">\(= Tr(N^{-1/2} H^\top (cI) H N^{-1/2}) - Tr(N^{-1/2} H^\top L H N^{-1/2})\)</span><br />
-<span class="math inline">\(= c Tr(N^{-1/2} H^\top H N^{-1/2}) - Tr(N^{-1/2} H^\top L H N^{-1/2})\)</span><br />
-<span class="math inline">\(= c Tr(I_k) - Tr(N^{-1/2} H^\top L H N^{-1/2})\)</span><br />
-<span class="math inline">\(= ck - Tr(N^{-1/2} H^\top L H N^{-1/2})\)</span></p>
+<p><span class="math display">\[\arg\max_H \bigg\{ \text{Tr}(N^{-1/2} H^\top (cI - L) H N^{-1/2}) \bigg\}\]</span></p>
+<p><span class="math inline">\(\text{Tr}(N^{-1/2} H^\top (cI - L) H N^{-1/2})\)</span><br />
+<span class="math inline">\(= \text{Tr}(N^{-1/2} H^\top (cI) H N^{-1/2} - N^{-1/2} H^\top L H N^{-1/2})\)</span><br />
+<span class="math inline">\(= \text{Tr}(N^{-1/2} H^\top (cI) H N^{-1/2}) - \text{Tr}(N^{-1/2} H^\top L H N^{-1/2})\)</span><br />
+<span class="math inline">\(= c \text{Tr}(N^{-1/2} H^\top H N^{-1/2}) - \text{Tr}(N^{-1/2} H^\top L H N^{-1/2})\)</span><br />
+<span class="math inline">\(= c \text{Tr}(I_k) - \text{Tr}(N^{-1/2} H^\top L H N^{-1/2})\)</span><br />
+<span class="math inline">\(= ck - \text{Tr}(N^{-1/2} H^\top L H N^{-1/2})\)</span></p>
 <p>So this is equivalent to:</p>
-<p><span class="math display">\[argmin_H \bigg\{ Tr(N^{-1/2} H^\top L H N^{-1/2}) \bigg\}\]</span></p>
+<p><span class="math display">\[\arg\min_H \bigg\{ \text{Tr}(N^{-1/2} H^\top L H N^{-1/2}) \bigg\}\]</span></p>
 </div>
 <div id="alternative-approaches-2" class="slide section level1">
 <h1>Alternative Approaches</h1>
