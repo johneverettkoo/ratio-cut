@@ -1,0 +1,683 @@
+---
+title: 'Connecting Ratio Cuts to Kernel Methods'
+subtitle: 'STAT-S 475/675'
+author: 'John Koo'
+date: 'Dec 2, 2019'
+# output: beamer_presentation
+output: slidy_presentation
+# output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      comment = NA, 
+                      warning = FALSE, 
+                      message = FALSE, 
+                      fig.height = 3, 
+                      fig.width = 5)
+
+options(xtable.comment = FALSE, 
+        xtable.table.placement = 'H')
+
+import::from(magrittr, `%<>%`, `%>%`)
+library(ggplot2)
+import::from(qgraph, qgraph)
+import::from(psych, tr)
+source('http://pages.iu.edu/~mtrosset/Courses/675/graph.r')
+source('~/Documents/spectral-clustering/functions-for-presentation.R')
+
+theme_set(theme_bw())
+```
+
+\newcommand{\tr}{\text{Tr}}
+
+# Inner Products and Kernel Methods
+
+Inner product matrix $B = \tilde{X} \tilde{X}^\top$  
+
+Equivalent to $[b_{ij}] = x_i^\top x_j$  
+
+Can be thought of as some sort of "similarity" measure between $x_i$ and $x_j$
+
+What if we try some other "inner products"?
+
+# Inner Products and Kernel Methods
+
+Some kernel functions we have seen so far ...
+
+* Linear kernel: $K(x_i, x_j) = x_i^\top x_j$
+
+* Polynomial kernel: $K(x_i, x_j) = (x_i + x_j + c)^d$
+
+* Heat kernel: $K(x_i, x_j) = \exp(-h ||x_i - x_j||^2)$
+
+* Cosine similarity: $K(x_i, x_j) = \frac{x_i^\top x_j}{||x_i|| ||x_j||}$
+
+# Inner Products and Kernel Methods
+
+Let $x_i \in \mathbb{R}^q$ for $i = 1, ..., n$  
+Let $K: \mathbb{R}^q \times \mathbb{R}^q \to \mathbb{R}$  
+$\phi: \mathbb{R}^q \to \mathbb{R}^p$
+
+$K(x_i, x_j)$ is a kernel function iff ...
+
+* there exists a representation function $\phi(x)$ such that 
+$K(x_i, x_j) = \phi(x_i)^\top \phi(x_j)$
+* i.e., $K(x_i, x_j)$ is an inner product of some transformation of $x_i$ and 
+$x_j$
+
+... iff ...
+
+* $K(x_i, x_j) = K(x_j, x_i)$
+* $B \in \mathbb{R}^{n \times n}$ such that $[b_{ij}] = K(x_i, x_j)$ is 
+symmetric and positive semidefinite
+* i.e., we can fully decompose kernel matrix $B$
+
+In more practical settings, we can relax these criteria
+
+In the text, we centered $B$, i.e., $\tilde{B} = P B P$, before decomposing
+
+# Inner Products and Kernel Methods
+
+Why do we care?
+
+* The linear kernel $K(x_i, x_j) = x_i^\top x_j$ is great for representing 
+ellipsoidal data
+
+* The representation function $\phi$ induced by kernel function $K$ can
+transform our data to something that's more ellipsoidal
+
+```{r, eval = FALSE}
+spiral.df <- readr::read_table(
+  'http://pages.iu.edu/~mtrosset/Courses/675/X.spiral',
+  col_names = FALSE
+)
+
+n <- nrow(spiral.df)
+
+spiral.df %>% 
+  dplyr::mutate(id = as.numeric(rownames(.))) %>% 
+  ggplot() + 
+  viridis::scale_colour_viridis() + 
+  geom_point(aes(x = X1, y = X2, colour = id)) +
+  coord_fixed() + 
+  theme(legend.position = 'none') + 
+  labs(x = NULL, y = NULL)
+```
+
+```{r, fig.width = 10, eval = FALSE}
+# values of h to try
+h.vector <- 10 ** seq(-8, 3)
+P <- diag(n) - matrix(1 / n, nrow = n, ncol = n)
+
+# construct plots
+eigenmaps <- lapply(h.vector, function(h) {
+  # similarity matrix
+  W <- exp(-h * as.matrix(dist(spiral.df)) ** 2)
+  W <- P %*% W %*% P
+  
+  W.eigen <- eigen(W)
+  
+  cbind(W.eigen$vectors[, 1] * sqrt(W.eigen$values[1]),
+        W.eigen$vectors[, 2] * sqrt(W.eigen$values[2])) %>% 
+    as.data.frame() %>%
+    dplyr::mutate(id = as.numeric(rownames(.))) %>%
+    ggplot() +
+    geom_point(aes(x = V1, y = V2, colour = id),
+               alpha = .5) +
+    viridis::scale_colour_viridis() +
+    labs(x = NULL, y = NULL, title = paste('h =', h)) + 
+    theme(legend.position = 'none') %>% 
+    return()
+})
+
+# construct plot
+.gridarrange <- function(...) gridExtra::grid.arrange(..., nrow = 2)
+do.call(.gridarrange, eigenmaps)
+```
+
+# Inner Products and Kernel Methods
+
+Why do we care about ellpisoidal data?
+
+* Many methods we use assume ellipsoidal (more specifically, Gaussian) data
+    * LDA/QDA
+    * Gaussian mixture models
+    * K-means clustering
+    
+* Also works when we need nonlinear decision boundaries but want to use a 
+classification model that assumes linear decision boundaries
+
+# Kernel K-Means
+
+From the text ...
+
+$$\begin{align}
+  H^* & = \arg\min_H \tr(B) - \tr(B H (H^\top H)^{-1} H^\top) \\
+  & = \arg\max_H \tr(N^{-1/2} H^\top B H N^{-1/2})
+\end{align}$$
+
+Where ...
+
+* $H \in \{0, 1\}^{n \times k}$ is a cluster assignment matrix
+    * $h_{ij} = \begin{cases} 
+      0 & x_i \not\in C_j \\ 1 & x_i \in C_j 
+    \end{cases}$
+* $N = H^\top H \in \mathbb{N}^{k \times k}$ is a diagonal matrix where 
+$n_{ij} = \begin{cases} |C_i| & i = j \\ 0 & \text{otherwise} \end{cases}$
+
+We have methods for solving Euclidean $k$-means that have been demonstrated to
+work fairly well (exchange, Lloyd, stochastic gradient descent)
+
+If $B$ is a valid kernel, there is a Euclidean representation for each $x_i$, 
+$y_i = \phi(x_i)$, and then we can just use one of our methods on $Y$
+
+# Ratio Cut 
+
+From the text ...
+
+$$H^* = \arg\min_H \tr(N^{-1/2} H^\top L H N^{-1/2})$$
+
+Where ...
+
+* $L = T - W$ is the combinatorial graph Laplacian of an undirected graph
+$\mathcal{G}$ with similarity weights $W$
+* $t_{ij} = \begin{cases} 
+  \sum_i w_{ij} & i = j \\
+  0 & \text{else}
+\end{cases}$, i.e., $t_{ii}$ is the degree of vertex $v_i$
+* $H$ and $N$ defined the same way as in kernel $k$-means
+
+# Ratio Cut
+
+Solving ratio cut for a given graph is NP-hard (proportional to number of 
+vertices times number of clusters)
+
+This is because it is a discrete optimization problem
+
+We can relax our discrete constraints on $H$ and $N$
+
+* Let $U = H N^{-1/2} = \begin{cases} 
+  u_{ij} = 0 & v_i \not\in C_j \\
+  u_{ij} = n_j^{-1/2} & v_i \in C_j
+\end{cases}$
+* Then we can rewrite the optimization problem as 
+$U^* = \arg\min_U \tr(U^\top L U)$
+* Now let $U$ be any $n \times k$ matrix
+* Then $\arg\min_U \tr(U^\top L U) = \begin{bmatrix} 
+  v_0 & \cdots & v_{k-1} 
+\end{bmatrix}$, i.e., the first $k$ eigenvectors of $L$ in increasing order of 
+eigenvalues
+* This gives us a continuous matrix, so the heuristic is to use $k$-means 
+clustering (using Lloyd's method or otherwise) on the first $k$ eigenvectors of
+$L$
+* This is called **spectral clustering**
+
+# Connecting Ratio Cut and Kernel K-Means
+
+Kernel $k$-means: $\arg\max_U \tr(U^\top B U)$
+
+* In practice, can be solved by decomposing $B$ and using Lloyd's method (or 
+similar)
+
+Ratio cut: $\arg\min_U \tr(U^\top L U)$
+
+* In practice, can be solved by decomposing $L$ and using Lloyd's method (or 
+similar)
+
+A few more leaps to connect the two ...
+
+* Since $L$ is positive semidefinite, so is $L^\dagger$, the generalized 
+inverse of $L$
+* $\implies L^\dagger$ is a kernel matrix!
+* The continuous relaxation of ratio cut says to do a partial unscaled 
+embedding, i.e., $\begin{bmatrix} v_0 & \cdots & v_{k-1} \end{bmatrix}$
+* If instead we do a full scaled embedding 
+$\begin{bmatrix} 
+  v_1 / \sqrt{\sigma_1} & \cdots & v_{n-1} / \sqrt{\sigma_{n-1}} 
+\end{bmatrix}$ 
+and solve $k$-means on this embedding, this is equivalent to solving kernel
+$k$-means with kernel matrix $L^\dagger$
+
+**However**: 
+$\arg\min_U \tr(U^\top L U) \neq \arg\max_U \tr(U^\top L^\dagger U)$
+
+Ratio cut and kernel $k$-means are only connected through spectral clustering
+
+# Example: Double Spiral
+
+```{r, fig.height = 10, fig.width = 10, fig.align = 'center'}
+# parameters
+set.seed(112358)
+eps <- 2 ** -2
+K <- 10  # for constructing the knn graph
+rad.max <- 10
+ang.max <- 2 * pi
+angles <- seq(0, ang.max, length.out = 100)
+radii <- seq(1, sqrt(rad.max), length.out = 100) ** 2
+
+# data
+spiral.df <- dplyr::data_frame(X = radii * cos(angles), 
+                               Y = radii * sin(angles))
+spiral.df <- dplyr::data_frame(X = radii * cos(angles), 
+                               Y = radii * sin(angles))
+neg.spiral.df <- dplyr::mutate(spiral.df, 
+                               X = -X, Y = -Y, 
+                               id = '2')
+spiral.df %<>% 
+  dplyr::mutate(id = '1') %>% 
+  dplyr::bind_rows(neg.spiral.df) %>% 
+  dplyr::mutate(X = X + rnorm(n = dplyr::n(), sd = eps), 
+                Y = Y + rnorm(n = dplyr::n(), sd = eps))
+n <- nrow(spiral.df)
+
+# plot the double spiral
+ggplot(spiral.df) + 
+  coord_fixed() + 
+  geom_point(aes(x = X, y = Y)) + 
+  labs(x = NULL, y = NULL)
+```
+
+# Example: Double Spiral
+
+* Construct an adjacency matrix $W$ 
+* $k$-nearest neighbors method (setting $k =10$)
+
+$$w_{ij} = \begin{cases}
+  1 & x_j \text{ is one of the 10 nearest neighbors of } x_i \\
+  0 & \text{otherwise}
+\end{cases}$$
+
+# Example: Double Spiral
+
+```{r, fig.height = 10, fig.width = 10, fig.align = 'center'}
+# construct similarity graph
+W <- spiral.df %>% 
+  dplyr::select(X, Y) %>% 
+  as.matrix() %>% 
+  mds.edm1() %>% 
+  graph.knn(K) %>% 
+  graph.adj()
+
+# plot the graph (this is what we're interested in, not the spiral)
+qgraph(W)
+```
+
+# Aside: Motivation for Spectral Clustering
+
+Alternative to $k$-means clustering on Euclidean data
+
+vs.
+
+Partitioning a graph
+
+# Aside: Motivation for Spectral Clustering
+
+## Alternative to $k$-means clustering
+
+* Start with data in Euclidean space
+* $k$-means clustering doesn't work well for non-spherical clusters
+* Use some sort of kernel method (e.g., heat kernel) to restructure into another 
+Euclidean configuration
+* Graph and similarity matrix construction is an intermediate step
+    * Spectral clustering methods developed with this motivation require you to 
+    construct a very specific type of graph
+
+## Partitioning a graph
+
+* Start with a graph
+* No Euclidean configuration to begin with
+* Ultimate goal is to partition the graph, not cluster points in $\mathbb{R}^d$
+* Any sort of Euclidean configuration or embedding is an intermediate step
+
+# Aside: Motivation for Spectral Clustering
+
+Alternative to $k$-means clustering on Euclidean data
+
+vs.
+
+Partitioning a graph
+
+# Aside: Motivation for Spectral Clustering
+
+Alternative to $k$-means clustering on Euclidean data
+
+vs.
+
+**Partitioning a graph**
+
+# Example: Double Spiral
+
+```{r, fig.height = 10, fig.width = 10, fig.align = 'center'}
+qgraph(W)
+```
+
+# Example: Double Spiral
+
+* Set $k = 2$
+* We have a qualitative *a priori* clustering in mind based on the picture of 
+the graph (and also the spirals)
+* Note that *our* idea of an ideal clustering may not agree with the ratio cut 
+metric, $Tr(N^{-1/2} H^\top L H N^{-1/2})$
+* Ratio cut metric provides an easy way to compare clusterings
+* Ratio cut metric based on *a priori* clustering: 0.08
+
+# Example: Double Spiral
+
+$k = 2$
+
+Embedding: $X_k = \begin{bmatrix} v_0 & v_1 \end{bmatrix}$
+
+Since $v_0 = e / \sqrt{n}$, this is an embedding in $\mathbb{R}^1$
+
+```{r, fig.height = 5, fig.width = 10, fig.align = 'center'}
+k <- 2
+
+L <- graph.laplacian(W)
+L.eigen <- eigen(L)
+H.approx <- L.eigen$vectors[, seq(n, n - k + 1)]
+
+H.approx %>% 
+  as.data.frame() %>% 
+  ggplot() + 
+  geom_point(aes(x = V2, y = V1), alpha = .1) + 
+  ylim(-.1, .1) + 
+  labs(x = expression(v[1]), y = expression(paste(v[0], ' = ', e / sqrt(n))))
+```
+
+# Example: Double Spiral
+
+Applying 2-means clustering on the embedding:
+
+```{r, fig.height = 5, fig.width = 10, fig.align = 'center'}
+init.clust <- rep(c(1, 2), c(100, 100))
+embed.1d.clust <- kmeans.initialized(H.approx, init.clust)
+rc <- ratio.cut.obj(L, embed.1d.clust$cluster)
+
+H.approx %>% 
+  as.data.frame() %>% 
+  ggplot() + 
+  geom_point(aes(x = V2, y = V1, colour = factor(embed.1d.clust$cluster)), 
+             alpha = .1) + 
+  ylim(-.1, .1) + 
+  labs(x = expression(v[1]), y = expression(paste(v[0], ' = ', e / sqrt(n)))) + 
+  guides(colour = FALSE) + 
+  scale_colour_brewer(palette = 'Set1')
+```
+
+Ratio cut metric: `r round(rc, 3)` (worse than baseline 0.08)
+
+# Example: Double Spiral
+
+Applying 2-means clustering on the embedding:
+
+```{r, fig.height = 10, fig.width = 10, fig.align = 'center'}
+qgraph(W, layout = 'spring', groups = factor(embed.1d.clust$cluster), 
+       legend = FALSE)
+```
+
+# Example: Double Spiral
+
+Kernel $k$-means and (the continuous relaxation of) ratio cut are equivalent if 
+we do a *full* embedding
+
+In this case, we get equivalent solutions if we have at least 3 embedding 
+dimensions
+
+```{r, fig.height = 3, fig.width = 10, fig.align = 'center', cache = TRUE}
+L.dagger <- MASS::ginv(L)
+full.embed.df <- lapply(seq(1, n - 1), function(k) {
+  H.unscaled <- L.eigen$vectors[, seq(n - 1, n - k)]
+  if (k == 1) {
+    H.scaled <- H.unscaled / sqrt(L.eigen$values[n - 1])
+  } else {
+    H.scaled <- H.unscaled %>% 
+      apply(1, function(x) x / sqrt(L.eigen$values[seq(n - 1, n - k)])) %>% 
+      t()
+  }
+  kmeans.scaled <- kmeans.initialized(H.scaled, init.clust)$cluster
+  dplyr::data_frame(dim = k, 
+                    ratio.cut = ratio.cut.obj(L, kmeans.scaled),
+                    k.means = kernel.kmeans.obj(L.dagger, kmeans.scaled))
+}) %>% 
+  dplyr::bind_rows()
+
+ggplot(full.embed.df) + 
+  geom_line(aes(x = dim, y = ratio.cut)) + 
+  labs(x = '# embedding dimensions', y = 'ratio cut objective') + 
+  scale_colour_brewer(palette = 'Set1') + 
+  scale_y_log10()
+
+ggplot(full.embed.df) + 
+  geom_line(aes(x = dim, y = k.means)) + 
+  labs(x = '# embedding dimensions', y = 'kernel k-means objective') + 
+  scale_colour_brewer(palette = 'Set1') + 
+  scale_y_log10()
+```
+
+In this case, using a full scaled embedding to match the kernel $k$-means 
+method works, while the typical unscaled $\mathbb{R}^{k-1}$ embedding fails
+
+However, in practice, if we add too many embedding dimensions, Lloyd's 
+algorithm is more likely to get stuck in local optima
+
+In the text, there is an example where both approaches fail
+
+# Example: Triple Spiral
+
+```{r, fig.height = 10, fig.width = 10, fig.align = 'center'}
+triple.spiral <- read.table('~/Downloads/spiral.txt')
+n <- nrow(triple.spiral)
+k <- 3
+
+ggplot(triple.spiral) + 
+  geom_point(aes(x = V1, y = V2, colour = factor(V3))) + 
+  scale_colour_brewer(palette = 'Set1') + 
+  labs(x = NULL, y = NULL, colour = NULL) + 
+  coord_fixed() + 
+  guides(colour = FALSE)
+```
+
+Again, we are less interested in this configuration of points and more 
+interested in a graph generated by these points.
+
+# Example: Triple Spiral
+
+5 nearest neighbors graph
+
+```{r, fig.height = 10, fig.width = 10, fig.align = 'center'}
+W <- triple.spiral %>% 
+  dplyr::select(V1, V2) %>% 
+  as.matrix() %>% 
+  mds.edm1() %>% 
+  graph.knn(5) %>% 
+  graph.adj()
+
+L <- graph.laplacian(W)
+rc <- round(ratio.cut.obj(L, triple.spiral$V3), 3)
+
+qgraph(W, groups = factor(triple.spiral$V3), legend = FALSE)
+```
+
+RCut using *a priori* labels: `r rc`
+
+# Example: Triple Spiral
+
+Typical spectral clustering method: Embed in $\mathbb{R}^{k-1}$, then perform 
+$k$-means clustering on the embedding: 
+
+```{r, fig.height = 10, fig.width = 10, fig.align = 'center'}
+k <- 3
+L.eigen <- eigen(L)
+H.approx <- L.eigen$vectors[, seq(n, n - k)]
+
+init.clust <- triple.spiral$V3
+kmeans.result <- factor(kmeans.initialized(H.approx[, 1:3], init.clust)$cluster)
+
+H.approx %>% 
+  as.data.frame() %>% 
+  ggplot() + 
+  geom_point(aes(x = V2, y = V3, colour = kmeans.result)) + 
+  coord_fixed() + 
+  scale_colour_brewer(palette = 'Set1') + 
+  guides(colour = FALSE) + 
+  labs(x = expression(v[1]), y = expression(v[2]))
+
+rc <- round(ratio.cut.obj(L, as.numeric(kmeans.result)), 3)
+```
+
+RCut using typical spectral clustering method: `r rc`
+
+# Example: Triple Spiral
+
+What if we embed in more dimensions?
+
+```{r, fig.height = 3, fig.width = 10, fig.align = 'center', cache = TRUE}
+L.dagger <- MASS::ginv(L)
+full.embed.df <- lapply(seq(1, n - 1), function(k) {
+  H.unscaled <- L.eigen$vectors[, seq(n - 1, n - k)]
+  if (k == 1) {
+    H.scaled <- H.unscaled / sqrt(L.eigen$values[n - 1])
+  } else {
+    H.scaled <- H.unscaled %>% 
+      apply(1, function(x) x / sqrt(L.eigen$values[seq(n - 1, n - k)])) %>% 
+      t()
+  }
+  kmeans.scaled <- kmeans.initialized(H.scaled, init.clust)$cluster
+  dplyr::data_frame(dim = k, 
+                    ratio.cut = ratio.cut.obj(L, kmeans.scaled),
+                    k.means = kernel.kmeans.obj(L.dagger, kmeans.scaled))
+}) %>% 
+  dplyr::bind_rows()
+
+ggplot(full.embed.df) + 
+  geom_line(aes(x = dim, y = ratio.cut)) + 
+  labs(x = '# embedding dimensions', y = 'ratio cut objective') + 
+  scale_colour_brewer(palette = 'Set1') + 
+  scale_y_log10()
+
+ggplot(full.embed.df) + 
+  geom_line(aes(x = dim, y = k.means)) + 
+  labs(x = '# embedding dimensions', y = 'kernel k-means objective') + 
+  scale_colour_brewer(palette = 'Set1') + 
+  scale_y_log10()
+```
+
+```{r, cache = TRUE, fig.height = 3, fig.width = 10, fig.align = 'center'}
+full.embed.df <- lapply(seq(1, n - 1), function(k) {
+  H.unscaled <- L.eigen$vectors[, seq(n - 1, n - k)]
+  if (k == 1) {
+    H.scaled <- H.unscaled / sqrt(L.eigen$values[n - 1])
+  } else {
+    H.scaled <- H.unscaled %>% 
+      apply(1, function(x) x / sqrt(L.eigen$values[seq(n - 1, n - k)])) %>% 
+      t()
+  }
+  kmeans.unscaled <- kmeans.initialized(H.unscaled, init.clust)$cluster
+  kmeans.scaled <- kmeans.initialized(H.scaled, init.clust)$cluster
+  dplyr::data_frame(dim = k, 
+                    unscaled = ratio.cut.obj(L, kmeans.unscaled), 
+                    scaled = ratio.cut.obj(L, kmeans.scaled))
+}) %>% 
+  dplyr::bind_rows()
+
+ggplot(full.embed.df) + 
+  geom_line(aes(x = dim, y = scaled, colour = 'scaled')) + 
+  geom_line(aes(x = dim, y = unscaled, colour = 'unscaled')) + 
+  labs(x = '# embedding dimensions', y = 'ratio cut objective', colour = NULL) + 
+  scale_colour_brewer(palette = 'Set1') + 
+  scale_y_log10() + 
+  theme(legend.position = 'bottom')
+```
+
+Surprising result: The scaled embedding never found the optimal ratio cut 
+clustering while the unscaled embedding did (until $d > 268$)
+
+# Alternative Approaches
+
+Alternative kernel $k$-means formulation[^1]:
+
+$$argmax_H \bigg\{ Tr(N^{-1/2} H^\top (cI - L) H N^{-1/2}) \bigg\}$$ 
+
+* $I$ is the $n \times n$ identity matrix
+* $c \in \mathbb{R}$ is some parameter
+
+[^1]: [Dhillon, Guan, Kulis](https://pdfs.semanticscholar.org/0f28/993f09606a3e3f6c5c9b6d17138f27d85069.pdf)
+
+# Alternative Approaches
+
+Kernel $k$-means criterion with kernel matrix $cI - L$:
+
+$$argmax_H \bigg\{ Tr(N^{-1/2} H^\top (cI - L) H N^{-1/2}) \bigg\}$$ 
+
+$Tr(N^{-1/2} H^\top (cI - L) H N^{-1/2})$  
+$= Tr(N^{-1/2} H^\top (cI) H N^{-1/2} - N^{-1/2} H^\top L H N^{-1/2})$  
+$= Tr(N^{-1/2} H^\top (cI) H N^{-1/2}) - Tr(N^{-1/2} H^\top L H N^{-1/2})$  
+$= c Tr(N^{-1/2} H^\top H N^{-1/2}) - Tr(N^{-1/2} H^\top L H N^{-1/2})$  
+$= c Tr(I_k) - Tr(N^{-1/2} H^\top L H N^{-1/2})$  
+$= ck - Tr(N^{-1/2} H^\top L H N^{-1/2})$
+
+So this is equivalent to:
+
+$$argmin_H \bigg\{ Tr(N^{-1/2} H^\top L H N^{-1/2}) \bigg\}$$ 
+
+# Alternative Approaches 
+
+Let $v$ be an eigenvector of $L$ with corresponding eigenvalue $\lambda$
+
+$(cI - L) v$  
+$= cIv - Lv$  
+$= cv - \lambda v$  
+$= (c - \lambda) v$
+
+$\implies$ $v$ is an eigenvector of $cI - L$ with corresponding eigenvalue 
+$c - \lambda$
+
+If we choose $c$ to be at least as big as the largest eigenvalue of $L$, then 
+$cI - L$ is positive semidefinite or positive definite.
+
+Then we can perfectly embed $cI - L$ using PCA.
+
+# Alternative Approaches
+
+Given a fully connected, undirected graph $\mathcal{G} = (V, E)$ with similarity
+matrix $W$ ...
+
+1. Compute the graph Laplacian matrix $L = T - W$
+2. Set $c \geq \lambda_{n-1}$, the largest eigenvalue of $L$
+3. Compute $B = cI - L$
+4. Fully embed $B$ using PCA
+5. Perform $k$-means clustering on the embedding (e.g., using Lloyd's algorithm)
+
+This embedding is almost the same as our Laplacian eigenmap of $L$ or PCA 
+embedding of $L^\dagger$, just with different scaling.
+
+If you can perform each of these steps, you will solve the ratio cut problem.
+
+In practice, this doesn't work so well.
+
+* Easily stuck in local minima in step 5
+
+# Alternative Approaches
+
+Semipositive programming[^2]:
+
+* Instead of relaxing the constraint on $U = H N^{-1/2}$ to allow $U$ to be 
+any real-valued matrix, force $U \in \mathbb{R}^{n \times k}$ to have
+nonnegative entries
+* Use Lloyd's algorithm (or other $k$-means solvers) on the columns of relaxed and nonnegative $U$ per usual
+* If we can solve the $k$-means problem on this version of $U$, under certain 
+constraints, we are guaranteed to obtain the ratio cut partitioning
+* Not clear how to actually obtain this nonnegative relaxed $U$ efficiently 
+(open problem)
+
+[^2]: [Ling, Strohmer](https://arxiv.org/pdf/1806.11429.pdf)
+
+# Open Problems
+
+1. When is $\arg\min_U \tr(U^\top L U) = \arg\max_U \tr(U^\top L^\dagger U)$?
+2. Are there other approaches to solving ratio cut?
+    * Exchange algorithms
+    * Stochastic gradient descent
+    * $k$-medioids
+3. Alternative kernel $k$-means formulations
