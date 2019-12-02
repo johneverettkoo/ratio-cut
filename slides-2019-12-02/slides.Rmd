@@ -313,7 +313,7 @@ Partitioning a graph
 
 # Aside: Motivation for Spectral Clustering
 
-## Alternative to $k$-means clustering
+Alternative to $k$-means clustering
 
 * Start with data in Euclidean space
 * $k$-means clustering doesn't work well for non-spherical clusters
@@ -323,7 +323,7 @@ Euclidean configuration
     * Spectral clustering methods developed with this motivation require you to 
     construct a very specific type of graph
 
-## Partitioning a graph
+Partitioning a graph
 
 * Start with a graph
 * No Euclidean configuration to begin with
@@ -554,13 +554,15 @@ ggplot(full.embed.df) +
   geom_line(aes(x = dim, y = ratio.cut)) + 
   labs(x = '# embedding dimensions', y = 'ratio cut objective') + 
   scale_colour_brewer(palette = 'Set1') + 
-  scale_y_log10()
+  scale_y_log10() + 
+  geom_hline(yintercept = ratio.cut.obj(L, triple.spiral$V3))
 
 ggplot(full.embed.df) + 
   geom_line(aes(x = dim, y = k.means)) + 
   labs(x = '# embedding dimensions', y = 'kernel k-means objective') + 
   scale_colour_brewer(palette = 'Set1') + 
-  scale_y_log10()
+  scale_y_log10() + 
+  geom_hline(yintercept = kernel.kmeans.obj(L.dagger, triple.spiral$V3))
 ```
 
 ```{r, cache = TRUE, fig.height = 3, fig.width = 10, fig.align = 'center'}
@@ -665,7 +667,8 @@ Semipositive programming[^2]:
 * Instead of relaxing the constraint on $U = H N^{-1/2}$ to allow $U$ to be 
 any real-valued matrix, force $U \in \mathbb{R}^{n \times k}$ to have
 nonnegative entries
-* Use Lloyd's algorithm (or other $k$-means solvers) on the columns of relaxed and nonnegative $U$ per usual
+* Use Lloyd's algorithm (or other $k$-means solvers) on the columns of relaxed 
+and nonnegative $U$ per usual
 * If we can solve the $k$-means problem on this version of $U$, under certain 
 constraints, we are guaranteed to obtain the ratio cut partitioning
 * Not clear how to actually obtain this nonnegative relaxed $U$ efficiently 
