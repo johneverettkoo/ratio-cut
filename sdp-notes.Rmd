@@ -1,0 +1,217 @@
+---
+title: 'SDP Notes'
+output: pdf_document
+# output: html_document
+# geometry: "left=1cm,right=1cm,top=1cm,bottom=1.5cm"
+urlcolor: blue
+header-includes:
+- \usepackage{float}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      comment = NA, 
+                      warning = FALSE, 
+                      message = FALSE, 
+                      fig.pos = 'H', 
+                      fig.align = 'center', 
+                      fig.height = 5, 
+                      fig.width = 8, 
+                      fig.dpi = 300)
+options(xtable.comment = FALSE, 
+        xtable.table.placement = 'H')
+```
+
+```{r}
+source('http://pages.iu.edu/~mtrosset/Courses/675/graph.r')
+import::from(magrittr, `%>%`)
+source('~/dev/ratio-cut/functions.R')
+source('~/dev/ratio-cut/sdp-functions.R')
+```
+
+\newcommand{\tr}{\text{Tr}}
+
+### The Ratio Cut Problem
+
+Given a fully connected, undirected similarity graph $G = (V, E)$ represented by weight matrix $W$, and known number of clusters/communities $k$, ratio cut 
+partitions the graph by minimizing the objective function:
+
+$$\arg\min_H \tr(H^\top L H)$$
+
+where $L$ is the unnormalized combinatorial Laplacian matrix $L = D - W$, 
+$D$ is the diagonal degree matrix $d_{ii} = \sum_j w_{ij}$, and 
+$H \in \mathbb{R}^{n \times k}$ is restricted to the form 
+$h_{ij} = \begin{cases} 
+  n_j^{-1/2} & \text{vertex } i \text{ is in cluster } j \\
+  0 & \text{else}
+\end{cases}$
+
+This problem is NP-hard, which brings us to ...
+
+### Spectral Clustering
+
+Note that $H^\top H = I$. So instead of restricting $H$ to a cluster membership 
+matrix, we just restrict $H$ such that $H^\top H = I$. Then 
+$H = \begin{bmatrix} v_0 & v_1 & \cdots & v_{k-1} \end{bmatrix}$, or the 
+matrix of $k$ eigenvectors that correspond to the smallest $k$ eigenvalues. 
+Since this does not provide cluster memberships, the first $k$ eigenvectors 
+are then treated as an embedding of the graph $G$ and $k$-means clustering is 
+then applied (e.g., using Lloyd's algorithm) to obtain cluster memberships.[^1] 
+
+However, there isn't much theoretical justification for this approach, nor are 
+there any guarantees that it will result in a clustering that minimizes the 
+ratio cut objective, which brings us to ...
+
+[^1]: This is almost (but not quite) the same as performing kernel $k$-means 
+clustering using the Moore-Penrose pseudoinverse of $L$ as a kernel matrix.
+
+### Semidefininte Programming Approach
+
+Ling and Strohmer[^2] showed that under certain conditions, the ratio cut 
+problem can be solved exactly using semidefinite programming. 
+
+First, we note that $\tr(H^\top L H) = \tr(L H H^\top)$. Let us denote 
+$Z = H H^\top$. We can see that $z_{ij} = n_k^{-1}$ if vertices $i$ and $j$ 
+both belong to the same cluster (where $n_k$ is the size of that cluster), 
+otherwise it is $0$. We can then note that $\tr(Z) = k$, the number of 
+clusters, and $Z$ is positive semidefinite of rank $k$. We also note that 
+$Z e = e$ where $e$ is a constant vector. 
+
+The SDP approach relaxes these constraints on $Z$ but keeps more constraints 
+than the spectral clustering approach. More formally, the SDP ratio cut 
+algorithm is as follows:
+
+1. Solve $\arg\min_Z \tr(L Z)$ subject to 
+    * $Z$ is positive semidefinite
+    * $Z \geq 0$ element-wise
+    * $\tr(Z) = k$
+    * $Ze = e$
+2. Use the solution to the above to obtain cluster memberships.
+
+The paper does not make it clear how to actually solve the semidefinite 
+programming problem or how to recover cluster memberships from $Z$, since 
+we are not guaranteed to obtain the "correct" form of $Z$ using this method. 
+
+[^2]: https://arxiv.org/abs/1806.11429
+
+### Possibly Interesting Question
+
+We previously noted that the spectral clustering approach to ratio cut is 
+almost equivalent to kernel $k$-means using the pseudoinverse of $L$ as a 
+kernel matrix. One problem that we have been trying to solve is under what 
+conditions does kernel $k$-means provide the optimal ratio cut clustering. 
+Similarly, we might be interested in a kernel $k$-means version of the 
+semidefinite programming approach:
+
+Let $L^\dagger$ be the pseudoinverse of $L$. Solve 
+$\arg\max_Z \tr(L^\dagger Z)$ subject to
+
+* $Z$ is positive semidefinite
+* $Z \geq 0$ element-wise
+* $\tr(Z) = k$
+* $Ze = e$
+    
+
+### Some Examples
+
+We will begin with a very simple graph with six vertices:
+
+```{r}
+k <- 2
+```
+
+```{r}
+W <- rbind(c(1, 1, 1, 0, 0, 0), 
+           c(1, 1, 1, 0, 0, 0), 
+           c(1, 1, 1, 0, 0, 0), 
+           c(0, 0, 0, 1, 1, 1), 
+           c(0, 0, 0, 1, 1, 1), 
+           c(0, 0, 0, 1, 1, 1))
+W[3, 4] <- W[4, 3] <- 1
+qgraph::qgraph(W, layout = 'circular')
+L <- graph.laplacian(W)
+L.dagger <- MASS::ginv(L)
+```
+
+It is clear (and easy to verify) that cutting the $3-4$ edge is optimal under 
+the ratio cut objective. Using the semidefinite programming method:
+
+```{r cache = TRUE}
+rc.sdp(L, k = k) %>% 
+  lapply(round, digits = 3)
+```
+
+We in fact get the exact solution to $Z$. The clustering here is based on a 
+spectral decomposition of $Z$, which can have up to $n - 1$ nonzero 
+eigenvectors (in this case we only have two). $k$-means is applied to this 
+embedding.
+
+We can also try the kernel $k$-means approach:
+
+```{r cache = TRUE}
+kmeans.sdp(L.dagger, k = k) %>% 
+  lapply(round, digits = 3)
+```
+
+And in fact we get identical results as before for both $Z$ and the clustering.
+
+Let's try the epsilon graph example from the text. Recall that the graph 
+Laplacian is of the form 
+$\begin{bmatrix} 
+  \epsilon & -\epsilon & 0 & 0 \\
+  -\epsilon & 1 + \epsilon & -1 & 0 \\
+  0 & -1 & 2 & -1 \\
+  0 & 0 & -1 & 1
+\end{bmatrix}$. 
+Ratio cut and kernel $k$-means gave different answers when 
+$\epsilon \in (0.6, 0.75)$.
+
+Plugging in $\epsilon = 0.6$, the SDP method for ratio cut gives:
+
+```{r}
+eps <- .6
+L <- rbind(c(eps, -eps, 0, 0), 
+           c(-eps, 1 + eps, -1, 0), 
+           c(0, -1, 2, -1),
+           c(0, 0, -1, 1))
+L.dagger <- MASS::ginv(L)
+```
+
+```{r cache = TRUE}
+rc.sdp(L) %>% 
+  lapply(round, digits = 3)
+```
+
+While the SDP method for kernel $k$-means gives:
+
+```{r cache = TRUE}
+kmeans.sdp(L.dagger) %>% 
+  lapply(round, digits = 3)
+```
+
+Plugging in $\epsilon = .7$:
+
+```{r}
+eps <- .7
+L <- rbind(c(eps, -eps, 0, 0), 
+           c(-eps, 1 + eps, -1, 0), 
+           c(0, -1, 2, -1),
+           c(0, 0, -1, 1))
+L.dagger <- MASS::ginv(L)
+```
+
+```{r cache = FALSE}
+rc.sdp(L) %>% 
+  lapply(round, digits = 3)
+```
+
+While the SDP method for kernel $k$-means gives:
+
+```{r cache = FALSE}
+kmeans.sdp(L.dagger) %>% 
+  lapply(round, digits = 3)
+```
+
+So while we can get SDP ratio cut and SDP kernel $k$-means to disagree, the 
+conditions are not identical to when this happens for the spectral clustering
+methods. 
