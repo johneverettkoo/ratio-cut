@@ -1,0 +1,143 @@
+---
+title: 'Notes on the SDP relaxation of $k$-means'
+output: pdf_document
+# output: html_document
+# geometry: "left=1cm,right=1cm,top=1cm,bottom=1.5cm"
+urlcolor: blue
+header-includes:
+- \usepackage{float}
+- \usepackage{amsmath}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      comment = NA, 
+                      warning = FALSE, 
+                      message = FALSE, 
+                      fig.pos = 'H', 
+                      fig.align = 'center', 
+                      fig.height = 5, 
+                      fig.width = 8, 
+                      fig.dpi = 300)
+options(xtable.comment = FALSE, 
+        xtable.table.placement = 'H')
+```
+
+\newcommand{\tr}{\text{Tr}}
+\newcommand{\diag}{\text{diag}}
+
+```{r}
+source('http://pages.iu.edu/~mtrosset/Courses/675/graph.r')
+import::from(magrittr, `%>%`)
+source('~/dev/ratio-cut/functions.R')
+source('~/dev/ratio-cut/sdp-functions.R')
+```
+
+# The SDP relaxation of $k$-means
+
+Iguchi et al.[^iguchi] formulated a semidefinite progmming approach to 
+$k$-means as follows[^notation]:
+
+[^iguchi]: https://arxiv.org/abs/1505.04778
+
+[^notation]: the notation is slightly different here
+
+$$\begin{split} 
+  \arg\max_Z & -\tr(D_2 Z) \\
+  \text{s.t. } & \tr(Z) = k \\
+  & Ze = e \\
+  & Z \geq 0 \text{ element-wise} \\
+  & Z \text{ is positive semidefinite}
+\end{split}$$
+
+Where 
+
+* $D_2 = [d_{ij}] = [||x_i - x_j||^2]$
+* $x_1, ..., x_n \in \mathbb{R}^q$
+* The number of clusters, $k$, is known
+* $e = \begin{bmatrix} 1 \\ \vdots \\ 1 \end{bmatrix} \in \mathbb{R}^q$
+
+Note that without the SDP relaxation, we have a rigid structure for $Z$ where 
+$z_{ij} = \begin{cases}
+  n_k^{-1} & x_i, x_j \text{ in same cluster } k \\
+  0 & \text{else}
+\end{cases}$
+
+# Equating the trace formulation of $k$-means to kernel $k$-means
+
+We can see that the data matrix 
+$X = \begin{bmatrix} x_1^\top \\ \vdots \\ x_n^\top \end{bmatrix}$ is not 
+explicitly in the objective, although squared Euclidean distances are. We can 
+rewrite this as a kernel formulation by noting that $D_2 = \kappa(B)$ where 
+$B$ is a kernel matrix:
+
+$$\begin{split}
+  -\tr(D_2 Z) & = -\tr(\kappa(B) Z) \\
+  & = -\tr((b e^\top - 2 B + e b^\top) Z) \\
+  & = 2 \tr(B Z) - \tr(b e^\top Z) - \tr(e b^\top Z) \\
+  & = 2 \tr (B Z) - \tr(b e^\top) - \tr(Z e b^\top) \\
+  & = 2 \tr (B Z) - \tr(b e^\top) - \tr(e b^\top) \\
+  & = 2 \tr (B Z) - 2 \tr(b e^\top) \\
+  & = 2 \tr (B Z) - 2 \tr(B)
+\end{split}$$
+
+... where $b = \diag(B)$, the vector of diagonal entries of $B$. Note that if 
+we think of $B$ as a weight matrix for an undirected graph, $\tr(B) = 0$. 
+Similarly, if we impose that the diagonal entries of $B$ are equal to $1$ 
+(e.g., $B$ is a correlation matrix), then $\diag(B) = n$. Either way, 
+$\tr(B)$ does not depend on $Z$, so we can ignore it in the objective, and we 
+can see that $\arg\max_Z \tr(D_2 Z) = \arg\max_Z \tr(B Z)$, which is just the 
+typical kernel formulation of $k$-means: 
+
+$$\begin{split}
+  \arg\max_Z & \tr(B Z) \\
+  \text{s.t. } & \tr(Z) = k \\
+  & z_{ij} = \begin{cases} 
+    n_k^{-1} & x_i, x_j \text{ in same cluster } k \\
+    0 & \text{else} 
+  \end{cases}
+\end{split}$$
+
+Similarly, we can go from a kernel formulation of $k$-means to one based on 
+squared Euclidean distances by noting that $D_2 = \tau(B)$. For simplicity of 
+notation, we will rewrite $\arg\max_x f(x) = \arg\max_x 2 f(x)$.
+
+$$\begin{split}
+  2\tr(B Z) & = 2\tr(\tau(D_2) Z) \\
+  & = \tr(-P D_2 P Z) \\
+  & = -\tr((I - n^{-1} e e^\top) D_2 (I - n^{-1} e e^\top) Z) \\
+  & = -\tr((D_2 - n^{-1} D_2 e e^\top - 
+    n^{-1} e e^\top D_2 + n^{-2} e e^\top e e^\top D_2) Z) \\
+  & = -\tr(D_2 Z) + n^{-1} \tr(D_2 e e^\top Z) + 
+    n^{-1} \tr(e e^\top D_2 Z) - n^{-2} \tr (e e^\top D_2 Z) \\
+  & = -\tr(D_2 Z) + 2 n^{-1} \tr(D_2 e e^\top) - n^{-2} \tr(D_2 e e^\top)
+\end{split}$$
+
+Since the second and third terms do not depend on $Z$, we can discard them, and 
+we get $\arg\max_Z \tr(B Z) = \arg\max_Z -\tr(D_2 Z)$.[^notes]
+
+[^notes]: We can rewrite 
+$\tr(D_2 e e^\top) = \sum_{i,j} d^2_{ij} = 2\sum_{i < j} d_{ij}$
+
+# Equating the SDP relaxation of $k$-means to the SDP relaxation of ratio cut
+
+The ratio cut objective is:
+
+$$\arg\min_Z \tr(L Z)$$
+
+where $L$ is the combinatorial graph Laplacian and $Z$ has the same structure 
+as before. If we relax the optimization problem by not enforcing $Z$ to have 
+this structure, we can see that:
+
+$$\arg\min_Z \tr(L Z) = \arg\max_Z \tr(L^\dagger Z)$$
+
+where $L^\dagger$ is the generalized inverse of $L$. Since $L^\dagger$ is 
+positive semidefinite, it can be thought of as a kernel matrix, and we can 
+apply the $\tau(\cdot)$ transformation to it to obtain $D_2$. In this case, 
+$D_2$ is the expected commute time of the graph that generated $L$.
+
+The argmin and argmax equivalence is not true in general if we force $Z$ to 
+have the structure that we want. It also is not true if we apply the 
+SDP constraints (namely $Z \geq 0$ element-wise). One question of interest 
+is under what conditions can we equate the two objectives under the SDP 
+constraints.
