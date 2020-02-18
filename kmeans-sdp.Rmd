@@ -1,7 +1,7 @@
 ---
 title: 'Notes on the SDP relaxation of $k$-means'
-# output: pdf_document
-output: html_document
+output: pdf_document
+# output: html_document
 # geometry: "left=1cm,right=1cm,top=1cm,bottom=1.5cm"
 urlcolor: blue
 header-includes:
@@ -27,10 +27,15 @@ options(xtable.comment = FALSE,
 \newcommand{\diag}{\text{diag}}
 
 ```{r}
+library(ggplot2) 
+
 source('http://pages.iu.edu/~mtrosset/Courses/675/graph.r')
 import::from(magrittr, `%>%`)
 source('~/dev/ratio-cut/functions.R')
 source('~/dev/ratio-cut/sdp-functions.R')
+
+doMC::registerDoMC(8)
+theme_set(theme_bw())
 ```
 
 # The SDP relaxation of $k$-means
@@ -218,4 +223,99 @@ We previously showed that when $\epsilon \in (0, 0.75)$, the optimal ratio
 cut is the $1-2$ cut, and when $\epsilon \in (0.75, 1)$, the optimal ratio cut 
 is the $2-3$ cut. However, for kernel $k$-means, the optimal clustering is 
 $\{\{1\}, \{2, 3, 4\}\}$ when $\epsilon \in (0, 0.6)$ and 
-$\{\{1, 2\}, \{3, 4\}\}$ when $\epsilon \in (0.6, 1)$.
+$\{\{1, 2\}, \{3, 4\}\}$ when $\epsilon \in (0.6, 1)$. One thing that might be 
+of interest is whether RatioCut-SDP and $k$-means-SDP yields the same results. 
+
+```{r, cache = TRUE, fig.height = 2, fig.width = 8}
+eps.vec <- seq(.5, .8, .01)
+n <- 4
+
+out.df <- plyr::ldply(eps.vec, function(e) {
+  L <- degenerate.graph.laplacian(e)
+  L.dagger <- MASS::ginv(L)
+  rc.clust <- rc.sdp(L, k)$cluster - 1
+  kmeans.clust <- kmeans.sdp(L.dagger, k)$cluster - 1
+  rc.clust <- ifelse(sum(rc.clust) == n / 2, 
+                     '((1, 2), (3, 4))', 
+                     '((1), (2, 3, 4))')
+  kmeans.clust <- ifelse(sum(kmeans.clust) == n / 2,
+                         '((1, 2), (3, 4))', 
+                         '((1), (2, 3, 4))')
+  dplyr::tibble(epsilon = e, 
+                rc.clust = rc.clust,
+                kmeans.clust = kmeans.clust)
+}, .parallel = TRUE)
+
+out.df %>% 
+  dplyr::mutate(rc.clust = factor(rc.clust),
+                kmeans.clust = factor(kmeans.clust)) %>% 
+  ggplot() + 
+  geom_line(aes(x = epsilon, y = rc.clust, colour = 'RC-SDP'),
+            size = 2, alpha = .5) + 
+  geom_line(aes(x = epsilon, y = kmeans.clust, colour = 'k-means-SDP'),
+            size = 2, alpha = .5) + 
+  labs(y = 'clustering', x = expression(epsilon),
+       colour = NULL)
+```
+
+Interestingly, both RatioCut-SDP and $k$-means-SDP fail to find the correct 
+$\epsilon$ where the optimal cut switches from $1-2$ to $2-3$. 
+
+### Example 3
+
+Here we look at the "spiral graph":
+
+```{r, fig.width = 3, fig.height = 3}
+W <- load.double.spiral()
+n <- nrow(W)
+L <- graph.laplacian(W)
+L.dagger <- MASS::ginv(L)
+
+qgraph::qgraph(W)
+```
+
+We know that the optimal ratio cut clustering is 
+$\{\{1, ..., 100\}, \{101, ..., 200\}\}$. This also happens to coincide with 
+the optimal $k$-means clustering. We also know that the spectral clustering 
+relaxation of ratio cut fails to provide the optimal ratio cut (even when 
+the $k$-means rounding step is initialized with the correct clustering). 
+
+Applying RatioCut-SDP to this graph:
+
+```{r, fig.width = 4, fig.height = 3, cache = TRUE}
+init.clust <- c(rep(1, 100), rep(2, 100))
+rc.clust <- rc.sdp(L, k, init.clust = init.clust)
+
+qgraph::qgraph(W, groups = factor(rc.clust$cluster))
+```
+
+Here we see that RatioCut-SDP makes the same mistake the spectral clustering 
+relaxation of ratio cut makes. We can also try $k$-means SDP:
+
+```{r, fig.width = 4, fig.height = 3, cache = TRUE}
+kmeans.clust <- kmeans.sdp(L.dagger, k, init.clust = init.clust)
+
+qgraph::qgraph(W, groups = factor(kmeans.clust$cluster))
+```
+
+Strangely, $k$-means-SDP makes a similar mistake RatioCut-SDP makes, while 
+performing $k$-means on the embedding of $L^\dagger$ is able to find the 
+optimal ratio cut (although Lloyd's algorithm runs into local minima issues as 
+we add more embedding dimensions, so it's not always practically feasible). 
+
+It's also worth noting that these optimization problems takes a while to solve.
+
+### Next steps
+
+1. RatioCut-SDP provides $Z \in \mathbb{R}^{n \times n}$, which, under the 
+full ratio cut constraints, should be $Z = H H^\top$. We saw that in example 1, 
+both RatioCut-SDP and $k$-means-SDP were able to find this exact $Z$, but 
+in examples 2 and 3, we needed a "rounding" step where we embedded $Z$ and 
+used Lloyd's algorithm to find a clustering. Lee and Strohmer are not 
+clear on how this should be handled, and neither are Peng and Wei. 
+2. Lee and Strohmer provide some criteria under which RatioCut-SDP is 
+guaranteed to find the optimal ratio cut clustering. So far, we haven't checked 
+if these criteria hold before running these experiments. 
+3. More examples ...
+4. Figure out when RatioCut-SDP and $k$-means SDP (using $L^\dagger$ as a 
+kernel matrix) coincide.

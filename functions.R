@@ -176,7 +176,7 @@ mds.tau <- function(H) {
   return(-0.5 * P %*% H %*% P)
 }
 
-degenerate.graph.laplacian <- function(epsilon) {
+degenerate.graph.laplacian <- function(eps) {
   L <- rbind(c(eps, -eps, 0, 0), 
              c(-eps, 1 + eps, -1, 0),
              c(0, -1, 2, -1), 
