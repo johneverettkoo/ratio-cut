@@ -70,7 +70,7 @@ wss.1d <- function(v, clust) {
     sum()
 }
 
-fiedler.vector.partitions <- function(L) {
+fiedler.vector.partitions <- function(L, parallel = TRUE) {
   # extract fiedler vector
   n <- nrow(L)
   L.eigen <- eigen(L)
@@ -91,11 +91,11 @@ fiedler.vector.partitions <- function(L) {
     dplyr::data_frame(clustering = clust.string, 
                       R = ratio.cut.obj(L, clust), 
                       W = wss.1d(f, clust))
-  })
-    return()
+  }, .parallel = parallel)
+  return()
 }
 
-all.2way.partitions <- function(L) {
+all.2way.partitions <- function(L, parallel = TRUE) {
   n <- nrow(L)
   K <- MASS::ginv(L)
   
@@ -111,7 +111,7 @@ all.2way.partitions <- function(L) {
                         W = kernel.kmeans.obj(K, clustering), 
                         R = ratio.cut.obj(L, clustering))
     })
-  })
+  }, .parallel = parallel)
 }
 
 diag.matrix <- function(m) {
@@ -155,10 +155,9 @@ ECT <- function(W) {
 }
 
 mds.kappa <- function(C) {
-  #
   #  Critchley's kappa operator on centered nxn matrices.
   #  This is the inverse of tau.
-  #
+  
   n <- nrow(C)
   H <- matrix(1,nrow=n,ncol=n)
   d <- diag(C)
@@ -169,12 +168,9 @@ mds.kappa <- function(C) {
   return(H)
 }
 
-mds.tau <- function(H)
-{
-  #
+mds.tau <- function(H) {
   #  This function returns the double centering of the inputted matrix.
   #  See Critchley for details.
-  #
   n <- nrow(H)
   P <- diag(n) - 1/n
   return(-0.5 * P %*% H %*% P)
@@ -186,4 +182,11 @@ degenerate.graph.laplacian <- function(epsilon) {
              c(0, -1, 2, -1), 
              c(0, 0, -1, 1))
   return(L)
+}
+
+load.double.spiral <- function() {
+  # file path is hard-coded :(
+  W <- read.table('~/dev/ratio-cut/data/spiral-graph.txt') %>% 
+    as.matrix() %>% 
+    return()
 }

@@ -1,4 +1,6 @@
-rc.sdp <- function(L, k = 2, verbose = FALSE, parallel = FALSE, cores = 4) {
+rc.sdp <- function(L, k = 2, 
+                   init.clust = NA, 
+                   verbose = FALSE, parallel = FALSE, cores = 4) {
   if (parallel) {
     doMC::registerDoMC(cores)
   }
@@ -19,11 +21,17 @@ rc.sdp <- function(L, k = 2, verbose = FALSE, parallel = FALSE, cores = 4) {
   Z.eigen <- eigen(Z.hat, symmetric = TRUE)
   embedding <- Z.eigen$vectors %>% 
     sweep(2, Z.eigen$values, '*')
-  clustering <- kmeans(embedding, 2)$cluster
+  if (is.na(init.clust)) {
+    clustering <- kmeans(embedding, 2)$cluster
+  } else {
+    clustering <- kmeans.initialized(embedding, init.clust)$cluster
+  }
   return(list(Z = Z.hat, clustering = clustering))
 }
 
-kmeans.sdp <- function(K, k = 2, verbose = FALSE, parallel = FALSE, cores = 4) {
+kmeans.sdp <- function(K, k = 2, 
+                       init.clust = NA, 
+                       verbose = FALSE, parallel = FALSE, cores = 4) {
   if (parallel) {
     doMC::registerDoMC(cores)
   }
@@ -44,6 +52,10 @@ kmeans.sdp <- function(K, k = 2, verbose = FALSE, parallel = FALSE, cores = 4) {
   Z.eigen <- eigen(Z.hat, symmetric = TRUE)
   embedding <- Z.eigen$vectors %>% 
     sweep(2, Z.eigen$values, '*')
-  clustering <- kmeans(embedding, 2)$cluster
+  if (is.na(init.clust)) {
+    clustering <- kmeans(embedding, 2)$cluster
+  } else {
+    clustering <- kmeans.initialized(embedding, init.clust)$cluster
+  }
   return(list(Z = Z.hat, clustering = clustering))
 }

@@ -1,7 +1,7 @@
 ---
 title: 'Notes on the SDP relaxation of $k$-means'
-output: pdf_document
-# output: html_document
+# output: pdf_document
+output: html_document
 # geometry: "left=1cm,right=1cm,top=1cm,bottom=1.5cm"
 urlcolor: blue
 header-includes:
@@ -117,7 +117,7 @@ Since the second and third terms do not depend on $Z$, we can discard them, and
 we get $\arg\max_Z \tr(B Z) = \arg\max_Z -\tr(D_2 Z)$.[^notes]
 
 [^notes]: We can rewrite 
-$\tr(D_2 e e^\top) = \sum_{i,j} d^2_{ij} = 2\sum_{i < j} d_{ij}$
+$\tr(D_2 e e^\top) = \sum_{i,j} d^2_{ij} = 2\sum_{i < j} d^2_{ij}$
 
 # Equating the SDP relaxation of $k$-means to the SDP relaxation of ratio cut
 
@@ -141,3 +141,81 @@ have the structure that we want. It also is not true if we apply the
 SDP constraints (namely $Z \geq 0$ element-wise). One question of interest 
 is under what conditions can we equate the two objectives under the SDP 
 constraints.
+
+### Example 1
+
+Here we look at a case where 
+$\arg\min_Z \tr(L Z) = \arg\max_Z \tr(L^\dagger Z)$ under the SDP restrictions 
+($Ze = e$, $\tr(Z) = k$, $Z$ is positive semidefinite, $Z \geq 0$ 
+element-wise). In fact, in this example, not only do the two problems have 
+the same solution, the solution coincides with the solution to the unrelaxed 
+ratio cut problem. 
+
+Here we have a very simple graph with just six vertices. The "intuitive cut" 
+for $k = 2$ is the $3-4$ cut, which happens to also be the solution to the 
+(fully constrained) ratio cut problem.
+
+```{r}
+k <- 2
+```
+
+```{r, fig.height = 1, fig.width = 1}
+W <- rbind(c(1, 1, 1, 0, 0, 0), 
+           c(1, 1, 1, 0, 0, 0), 
+           c(1, 1, 1, 0, 0, 0), 
+           c(0, 0, 0, 1, 1, 1), 
+           c(0, 0, 0, 1, 1, 1), 
+           c(0, 0, 0, 1, 1, 1))
+W[3, 4] <- W[4, 3] <- 1
+qgraph::qgraph(W, layout = 'circular')
+L <- graph.laplacian(W)
+L.dagger <- MASS::ginv(L)
+```
+
+The RatioCut-SDP solution (Lee and Strohmer)[^rcsdp] yields:
+
+```{r echo = TRUE}
+rc.sdp(L, k = 2)$Z %>% 
+  MASS::fractions()
+```
+
+[^rcsdp]: https://arxiv.org/abs/1806.11429
+
+The $k$-means SDP solution using $L^\dagger$ as a kernel matrix (adapted from 
+Peng and Wei)[^kmeanssdp] yields:
+
+```{r echo = TRUE}
+kmeans.sdp(L.dagger, k = 2)$Z %>% 
+  MASS::fractions()
+```
+
+[^kmeanssdp]: http://www.optimization-online.org/DB_FILE/2005/04/1114.pdf
+
+### Example 2
+
+Let's try the epsilon graph example from the text. This graph has four vertices 
+connected in series by three edges. The $2-3$ and $3-4$ edges have weight 1 but 
+the $1-2$ edge has weight $\epsilon \in (0, 1)$.
+
+```{r fig.height = 1, fig.width = 1}
+eps <- .5
+W <- rbind(c(0, eps, 0, 0), 
+           c(eps, 0, 1, 0), 
+           c(0, 1, 0, 1), 
+           c(0, 0, 1, 0))
+qgraph::qgraph(W)
+```
+
+Recall that the graph Laplacian is of the form  
+$\begin{bmatrix} 
+  \epsilon & -\epsilon & 0 & 0 \\
+  -\epsilon & 1 + \epsilon & -1 & 0 \\
+  0 & -1 & 2 & -1 \\
+  0 & 0 & -1 & 1
+\end{bmatrix}$. 
+
+We previously showed that when $\epsilon \in (0, 0.75)$, the optimal ratio 
+cut is the $1-2$ cut, and when $\epsilon \in (0.75, 1)$, the optimal ratio cut 
+is the $2-3$ cut. However, for kernel $k$-means, the optimal clustering is 
+$\{\{1\}, \{2, 3, 4\}\}$ when $\epsilon \in (0, 0.6)$ and 
+$\{\{1, 2\}, \{3, 4\}\}$ when $\epsilon \in (0.6, 1)$.

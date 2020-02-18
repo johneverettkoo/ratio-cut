@@ -1,7 +1,7 @@
 ---
 title: 'SDP Notes'
-output: pdf_document
-# output: html_document
+# output: pdf_document
+output: html_document
 # geometry: "left=1cm,right=1cm,top=1cm,bottom=1.5cm"
 urlcolor: blue
 header-includes:
