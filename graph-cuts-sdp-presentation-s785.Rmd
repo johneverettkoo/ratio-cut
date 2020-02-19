@@ -1,0 +1,407 @@
+---
+title: 'Certifying Global Optimality of Graph Cuts via Semidefinite Relaxation'
+subtitle: 'A Performance Guarantee for Spectral Clustering'
+author: Shuyang Ling and Thomas Strohmer
+date: Feb 18, 2020
+# output: ioslides_presentation
+output: 
+  beamer_presentation:
+    theme: 'default'
+    colortheme: 'beaver'
+    includes:
+      in_header: page_headers.tex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      comment = NA, 
+                      warning = FALSE, 
+                      message = FALSE)
+
+options(xtable.comment = FALSE, 
+        xtable.table.placement = 'H')
+```
+
+```{r}
+library(ggplot2) 
+
+source('http://pages.iu.edu/~mtrosset/Courses/675/graph.r')
+import::from(magrittr, `%>%`)
+source('~/dev/ratio-cut/functions.R')
+source('~/dev/ratio-cut/sdp-functions.R')
+
+doMC::registerDoMC(8)
+theme_set(theme_bw())
+```
+
+# Introduction
+
+\newcommand{\tr}{\text{ Tr}}
+\newcommand{\diag}{\text{diag}}
+
+Graph $G = (V, E)$ consists of a set of vertices $V$ and a set of edges $E$ 
+connecting vertices
+
+```{r fig.height = 2, fig.width = 3}
+# --- create example graph from (unweighted) SBM --- #
+
+set.seed(314159)
+
+# edge probabilities
+p0 <- 2 ** -1
+q0 <- 2 ** -4
+
+# number of vertices
+n <- 2 ** 4
+
+# probability of being in cluster 1 vs cluster 2
+r <- 2 ** -1
+
+# initial clustering
+s <- rbinom(n, 1, r)
+
+# affinity matrix
+A <- matrix(0, nrow = n, ncol = n)
+Aw <- A
+for (i in seq(n - 1)) {
+  for (j in seq(i + 1, n)) {
+    if (s[i] == s[j]) {
+      A[i, j] <- rbinom(1, 1, p0)
+      if (A[i, j] != 0) {
+        Aw[i, j] <- rbeta(1, 2, 1)
+      }
+    } else {
+      A[i, j] <- rbinom(1, 1, q0)
+      if (A[i, j] != 0) {
+        Aw[i, j] <- rbeta(1, 1, 2)
+      }
+    }
+  }
+}
+A <- t(A) + A
+Aw <- t(Aw) + Aw
+
+qgraph::qgraph(A)
+# qgraph::qgraph(A, groups = factor(s))
+```
+
+Summarized by edge weight matrix $W$  
+$w_{ij}$ is the value of the edge between vertices $v_i$ and $v_j$
+
+# Graph Partitioning
+
+What is the "best" way to cluster the vertices?
+
+```{r fig.height = 2, fig.width = 4}
+qgraph::qgraph(A, groups = factor(s))
+```
+
+# Graph Cut Objectives
+
+Find a "reasonable" way to cut edges to obtain two disconnected subgraphs
+
+```{r fig.height = 2, fig.width = 4}
+A.iso <- A
+A.iso[1, 7] <- A.iso[7, 1] <- 
+  A.iso[7, 9] <- A.iso[9, 7] <- 
+  A.iso[9, 11] <- A.iso[11, 9] <- 
+  A.iso[5, 15] <- A.iso[15, 5] <- 
+  .45
+
+qgraph::qgraph(A.iso, groups = factor(s), layout = 'spring')
+```
+
+# Graph Cut Objectives
+
+Let 
+
+* $\{C_1, ..., C_k\}$ be a partition of $V$  
+* $cut(C, C^c) = \sum_{v_i \in C} \sum_{v_j \in C^C} w_{ij}$
+* $|C| =$ number of vertices in set $C$
+* $vol(C) =$ sum of edges pointing to vertices in set $C$
+
+Plausible graph cut objectives
+
+* Min Cut: $\min_j \sum_j^k cut(C_j, C_j^c)$
+* Ratio Cut: $\min_j \sum_j^k \frac{cut(C_j, C_j^c)}{|C_j|}$
+* Normalized Cut: $\min_j \sum_j^k \frac{cut(C_j, C_j^c)}{vol(C_j)}$
+
+# Graph Cut Objectives
+
+Let 
+
+* $\{C_1, ..., C_k\}$ be a partition of $V$  
+* $cut(C, C^c) = \sum_{v_i \in C} \sum_{v_j \in C^C} w_{ij}$
+* $|C| =$ number of vertices in set $C$
+* $vol(C) =$ sum of edges pointing to vertices in set $C$
+
+Plausible graph cut objectives
+
+* Min Cut: $\min_j \sum_j^k cut(C_j, C_j^c)$
+* **Ratio Cut**: $\min_j \sum_j^k \frac{cut(C_j, C_j^c)}{|C_j|}$
+* Normalized Cut: $\min_j \sum_j^k \frac{cut(C_j, C_j^c)}{vol(C_j)}$
+
+# Ratio Cut Reformulation
+
+Define 
+
+* Degree matrix $D$ s.t. $d_{ii} = \sum_j w_{ij}$
+* Combinatorial graph Laplacian $L = D - W$
+* Cluster membership matrix $U \in \mathbb{R}^{n \times k}$ s.t. 
+$u_{ij} = \begin{cases} 
+  n_j^{-1/2} & v_i \in C_j \\
+  0 & \text{else}
+\end{cases}$
+
+Ratio cut objective:
+
+$$\begin{split}
+  \arg\min_U & \tr(U^\top L U) \\
+  \text{s.t. } & u_{ij} = \begin{cases} 
+    n_j^{-1/2} & v_i \in C_j \\
+    0 & \text{else}
+  \end{cases}
+\end{split}$$
+
+# Ratio Cut Reformulation
+
+Ratio cut objective: $\arg\min_U \tr(U^\top L U)$
+
+* $U$ is restricted to a very specific form 
+* $U^\top U = I_k$
+* $U U^\top = Z \in \mathbb{R}^{n \times n}$ s.t. 
+$z_{ij} = \begin{cases}
+  n_k^{-1} & v_i, v_j \text{ in same cluster } C_k \\
+  0 & \text{else}
+\end{cases}$
+* $\tr(U^\top U) = \tr(U U^\top) = k$
+
+# Spectral Clustering
+
+* Ratio cut problem is a discrete optimization problem that is NP-hard
+* Remove the discreteness constraint
+
+$$\begin{split}
+  \arg\min_U & \tr(U^\top L U) \\
+  \text{s.t. } & U^\top U = I_k
+\end{split}$$
+
+* Rayleigh-Ritz theorem: 
+$\hat{U} = \begin{bmatrix} u_0 & \cdots & u_{k-1} \end{bmatrix}$ first $k$ 
+eigenvectors of $L$ corresponding to the $k$ smallest eigenvalues
+* $\hat{U}$ doesn't provide cluster assignments
+* Treat $\hat{U}$ as an embedding in $\mathbb{R}^{k-1}$ and perform $k$-means 
+clustering
+* Not guaranteed to correspond to the ratio cut solution
+* Not much theoretical basis for why/how this works
+
+# Spectral Clustering: Justification 1
+
+Davis-Kahan theorem: If two matrices $A$ and $\tilde{A}$ are "close", then 
+the subspaces generated by their eigenvectors is also "close"
+
+Let
+
+* $G_{iso} = (V, E_{iso})$ be a graph with $k$ disconnected subgraphs
+* $W_{iso}$ be the corresponding weight matrix
+* $L_{iso} = D_{iso} - W_{iso}$ be the corresponding Laplacian matrix
+
+Then
+
+* $L_{iso}$ has $k$ zero eigenvalues
+* The $k$ eigenvectors of $L_{iso}$ that correspond to the $k$ zero 
+eigenvalues are of the form 
+$u_{ij} = \begin{cases}
+  n_j^{-1/2} & v_i \in \text{ subgraph } j \\
+  0 & \text{else}
+\end{cases}$
+
+This is the type of $U$ we want to find in the ratio cut problem
+
+# Spectral Clustering: Justification 1
+
+Davis-Kahan theorem: If two matrices $A$ and $\tilde{A}$ are "close", then 
+the subspaces generated by their eigenvectors is also "close"
+
+Let
+
+* $W = W_{iso} + \Delta$ such that $\Delta$ is "small" and $W$ corresponds to 
+a connected graph $G = (V, E)$
+* $L = D - W$ be the combinatorial Laplacian matrix 
+
+Then 
+
+* $L$ has one zero eigenvector
+* The eigenspaces generated by the eigenvectors of $L$ and $L_{iso}$ is 
+"small"
+    * Hopefully the eigenvectors of $L$ are a good approximation of the 
+    eigenvectors of $L_{iso}$
+
+# Spectral Clustering: Justification 2
+
+Laplacian eigenmap - the embedding generated by the eigenvalues and 
+eigenvectors of $L$
+
+* If instead of 
+$\hat{U} = \begin{bmatrix} u_0 & \cdots & u_{k-1} \end{bmatrix}$, 
+we use $\hat{U} = \begin{bmatrix} 
+  u_1 / \sqrt{\lambda_1} & \cdots & u_{k-1} / \sqrt{\lambda_{k-1}} 
+\end{bmatrix}$, we get a Laplacian eigenmap
+* Characterizes the expected commute time of a random walk between two vertices
+* Equivalent to performing kernel $k$-means on the generalized inverse of $L$:
+
+$$\begin{split}
+  \arg\max_U & \tr(U^\top L^\dagger U) \\
+  \text{s.t. } & u_{ij} = \begin{cases} 
+    n_j^{-1/2} & v_i \in C_j \\
+    0 & \text{else}
+  \end{cases}
+\end{split}$$
+
+# Example
+
+```{r fig.width = 3, fig.height = 2}
+qgraph::qgraph(A)
+
+L <- graph.laplacian(A)
+L.eigen <- eigen(L, symmetric = TRUE)
+```
+
+# Example
+
+```{r fig.width = 4, fig.height = 2}
+n <- nrow(L)
+embedding <- L.eigen$vectors[, n - 1]
+ggplot() + 
+  geom_text(aes(x = embedding, y = n ** -.5, label = seq(n))) + 
+  labs(x = expression(v[1]), y = expression(v[0]))
+```
+
+# Example
+
+```{r fig.width = 5, fig.height = 2}
+clustering <- kmeans(embedding, 2)$cluster
+
+ggplot() + 
+  geom_text(aes(x = embedding, y = n ** -.5, 
+                label = seq(n),
+                colour = factor(clustering))) + 
+  labs(x = expression(v[1]), y = expression(v[0]),
+       colour = NULL)
+```
+
+# Example
+
+```{r fig.width = 4, fig.height = 2}
+qgraph::qgraph(A, groups = factor(clustering))
+```
+
+# RatioCut-SDP
+
+* Main idea: Spectral clustering is too loose of a relaxation of the ratio 
+cut problem
+* Solution: Add additional constraints
+* Goal: Find out when the solution to the relaxed version of the ratio cut
+problem coincides with the actual solution
+
+# RatioCut-SDP
+
+Recall the ratio cut problem: $\arg\min_U \tr(U^\top L U)$
+
+Rewrite $\tr(U^\top L U) = \tr(L U U^\top) = \tr(L Z)$
+
+Then we get
+
+$$\begin{split}
+  \arg\min_Z & \tr(L Z) \\
+  \text{s.t. } & z_{ij} = \begin{cases}
+    n_k^{-1} & v_i, v_j \in C_k \\
+    0 & \text{else}
+  \end{cases}
+\end{split}$$
+
+* Still a discrete optimization problem
+* Also note that $Ze = e$, $Z$ is positive semidefinite, $\tr(Z) = k$, entries 
+of $Z \geq 0$
+
+# RatioCut-SDP
+
+$$\begin{split}
+  \arg\min_Z & \tr(L Z) \\
+  \text{s.t. } & Z \geq 0 \text{ element-wise} \\
+  & Z \text{ is PSD} \\
+  & Ze = e \\
+  & \tr(Z) = k
+\end{split}$$
+
+This is a convex semidefinite programming problem
+
+# RatioCut-SDP
+
+* Spectral clustering has no (known) conditions for which we are guaranteed 
+the correct clustering
+
+**Theorem 3.1**
+
+* Given
+    * Connected graph $G = (V, E)$ and corresponding weight matrix $W$
+    * Number of clusters $k$
+    * Known optimal ratio cut clustering
+    * $W_{iso}$ based on $W$ and the known optimal ratio cut clustering of $G$
+    * $D$ and $L$ corresponding to $W$
+    * $D_{iso}$ and $L_{iso}$ corresponding to $W_{iso}$
+    * $D_{\delta} = D - D_{iso}$
+* Then
+    * $\{C_1, ..., C_k\} = RCSDP(L, k)$ is the optimal ratio cut clustering 
+    given that $||D_\delta||_{op} < \frac{1}{4} \lambda_{k+1}(L_{iso})$
+    
+# Example
+
+```{r, fig.height = 2, fig.width = 2, fig.align = 'center'}
+W <- rbind(c(1, 1, 1, 0, 0, 0), 
+           c(1, 1, 1, 0, 0, 0), 
+           c(1, 1, 1, 0, 0, 0), 
+           c(0, 0, 0, 1, 1, 1), 
+           c(0, 0, 0, 1, 1, 1), 
+           c(0, 0, 0, 1, 1, 1))
+W[3, 4] <- W[4, 3] <- 1
+qgraph::qgraph(W, layout = 'circular')
+```
+
+# Example
+
+```{r echo = TRUE}
+L <- graph.laplacian(W)
+rc.sdp(L, 2)$Z %>% 
+  MASS::fractions()
+```
+
+# Example
+
+Check conditions
+
+```{r echo = TRUE}
+W.iso <- W
+W.iso[3, 4] <- W.iso[4, 3] <- 0
+L.iso <- graph.laplacian(W.iso)
+D <- diag(colSums(W))
+D.iso <- diag(colSums(W.iso))
+D.delta <- D - D.iso
+n <- nrow(W)
+
+norm(D.delta, type = '2')
+
+eigen(L.iso)$values[n - 2] / 4
+```
+
+# Example
+
+* In general, the output of RatioCut-SDP $\hat{Z}$ does not provide cluster 
+memberships
+* Not clear how to obtain clustering from $\hat{Z}$
+* One idea: Use SVD/spectral decomposition on $\hat{Z}$ to obtain an embedding 
+and perform $k$-means on the embedding
+* Ideally we could obtain $U \in \mathbb{R}^{n \times k}$ from $\hat{Z}$ but 
+in general $rank(Z) = n - 1$
+* Rank constraints are not convex, no good way to force $Z = U U^\top$ for 
+$U \in \mathbb{R}^{n \times k}$k
