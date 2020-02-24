@@ -12,7 +12,9 @@ rc.sdp <- function(L, k = 2,
   constraints <- list(CVXR::matrix_trace(Z) == k,
                       Z %*% rep(1, n) == rep(1, n))
   positive.constraints <- (Z >= 0)
-  constraints <- c(constraints, positive.constraints) %>%
+  constraints %<>% 
+    c(positive.constraints) %>%
+    # c(CVXR::multiply(Z, Z) == Z) %>% 
     unname()
   problem <- CVXR::Problem(objective, constraints)
   out <- CVXR::solve(problem, parallel = parallel, verbose = verbose)
@@ -43,7 +45,9 @@ kmeans.sdp <- function(K, k = 2,
   constraints <- list(CVXR::matrix_trace(Z) == k,
                       Z %*% rep(1, n) == rep(1, n))
   positive.constraints <- (Z >= 0)
-  constraints <- c(constraints, positive.constraints) %>% 
+  constraints %<>% 
+    c(positive.constraints) %>%
+    # c(Z %*% Z == Z) %>% 
     unname()
   problem <- CVXR::Problem(objective, constraints)
   out <- CVXR::solve(problem, parallel = parallel, verbose = verbose)

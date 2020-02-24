@@ -33,7 +33,8 @@ source('~/dev/ratio-cut/sdp-functions.R')
 
 ### The Ratio Cut Problem
 
-Given a fully connected, undirected similarity graph $G = (V, E)$ represented by weight matrix $W$, and known number of clusters/communities $k$, ratio cut 
+Given a connected, undirected similarity graph $G = (V, E)$ represented by 
+weight matrix $W$, and known number of clusters/communities $k$, ratio cut 
 partitions the graph by minimizing the objective function:
 
 $$\arg\min_H \tr(H^\top L H)$$
