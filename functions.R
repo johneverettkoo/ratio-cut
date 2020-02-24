@@ -190,3 +190,16 @@ load.double.spiral <- function() {
     as.matrix() %>% 
     return()
 }
+
+degree.matrix <- function(W) {
+  # construct diagonal degree matrix from W
+  return(diag(colSums(W)))
+}
+
+operator.norm <- function(A) {
+  # operator norm of matrix A
+  # this is just the square root of the largest eigenvalue of t(A) %*% A
+  return(sqrt(eigen(t(A) %*% A, 
+                    symmetric = TRUE, 
+                    only.values = TRUE)$values[1]))
+}
