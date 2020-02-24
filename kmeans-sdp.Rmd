@@ -74,7 +74,10 @@ We can see that the data matrix
 $X = \begin{bmatrix} x_1^\top \\ \vdots \\ x_n^\top \end{bmatrix}$ is not 
 explicitly in the objective, although squared Euclidean distances are. We can 
 rewrite this as a kernel formulation by noting that $D_2 = \kappa(B)$ where 
-$B$ is a kernel matrix:
+$B$ is a kernel matrix[^math]:
+
+[^math]: In the following steps we use the fact that $Z$ is symmetric, 
+$Ze = e$, $e^\top Z = e^\top$, and $e^\top e = n$
 
 $$\begin{split}
   -\tr(D_2 Z) & = -\tr(\kappa(B) Z) \\
@@ -91,7 +94,7 @@ we think of $B$ as a weight matrix for an undirected graph, $\tr(B) = 0$.
 Similarly, if we impose that the diagonal entries of $B$ are equal to $1$ 
 (e.g., $B$ is a correlation matrix), then $\diag(B) = n$. Either way, 
 $\tr(B)$ does not depend on $Z$, so we can ignore it in the objective, and we 
-can see that $\arg\max_Z \tr(D_2 Z) = \arg\max_Z \tr(B Z)$, which is just the 
+can see that $-\arg\max_Z \tr(D_2 Z) = \arg\max_Z \tr(B Z)$, which is just the 
 typical kernel formulation of $k$-means: 
 
 $$\begin{split}
@@ -114,8 +117,9 @@ $$\begin{split}
   & = -\tr((D_2 - n^{-1} D_2 e e^\top - 
     n^{-1} e e^\top D_2 + n^{-2} e e^\top e e^\top D_2) Z) \\
   & = -\tr(D_2 Z) + n^{-1} \tr(D_2 e e^\top Z) + 
-    n^{-1} \tr(e e^\top D_2 Z) - n^{-2} \tr (e e^\top D_2 Z) \\
-  & = -\tr(D_2 Z) + 2 n^{-1} \tr(D_2 e e^\top) - n^{-2} \tr(D_2 e e^\top)
+    n^{-1} \tr(e e^\top D_2 Z) - n^{-1} \tr (e e^\top D_2 Z) \\
+  & = -\tr(D_2 Z) + 2 n^{-1} \tr(D_2 e e^\top) - n^{-1} \tr(D_2 e e^\top) \\
+  & = -\tr(D_2 Z) + n^{-1} \tr(D_2 e e^\top)
 \end{split}$$
 
 Since the second and third terms do not depend on $Z$, we can discard them, and 
@@ -147,6 +151,8 @@ SDP constraints (namely $Z \geq 0$ element-wise). One question of interest
 is under what conditions can we equate the two objectives under the SDP 
 constraints.
 
+# Examples
+
 ### Example 1
 
 Here we look at a case where 
@@ -177,7 +183,7 @@ L <- graph.laplacian(W)
 L.dagger <- MASS::ginv(L)
 ```
 
-The RatioCut-SDP solution (Lee and Strohmer)[^rcsdp] yields:
+The RatioCut-SDP solution (Ling and Strohmer)[^rcsdp] yields:
 
 ```{r echo = TRUE}
 rc.sdp(L, k = 2)$Z %>% 
@@ -255,7 +261,10 @@ out.df %>%
   geom_line(aes(x = epsilon, y = kmeans.clust, colour = 'k-means-SDP'),
             size = 2, alpha = .5) + 
   labs(y = 'clustering', x = expression(epsilon),
-       colour = NULL)
+       colour = NULL) + 
+  geom_vline(xintercept = .6) + 
+  geom_vline(xintercept = .75) + 
+  scale_colour_brewer(palette = 'Set1')
 ```
 
 Interestingly, both RatioCut-SDP and $k$-means-SDP fail to find the correct 
@@ -305,15 +314,43 @@ we add more embedding dimensions, so it's not always practically feasible).
 
 It's also worth noting that these optimization problems takes a while to solve.
 
-### Next steps
+# RatioCut-SDP optimality criterion
+
+Ling and Strohmer outlines the following as being required for RatioCut-SDP to 
+find the optimal ratio cut:
+
+$$||D_\delta||_{op} < \frac{\lambda_{k+1}(L_{iso})}{4}$$
+
+where 
+
+* $W_{iso}$ is the weight matrix given that the optimal ratio cut is known 
+and the edges of $W$ are cut accordingly
+* $W_\delta = W - W_{iso}$, the edges that are to be cut for the optimal ratio 
+cut
+* $D_{iso}$, $D_\delta$, $L_{iso}$, and $L_\delta$ are the degree and 
+combinatorial graph Laplacian matrices constructed from $W_{iso}$ and $W_\delta$
+* $||\cdot||_{op}$ is the operator norm
+* $\lambda_i(A)$ is the $i^{th}$ eigenvalue of matrix $A$
+
+Examples 1-3 all violate this criterion. 
+
+Intuitively, the criterion says that the within-cluster connectivity must be 
+large compared to the magnitude of the betweeen-cluster edges. Note that 
+$L_{iso}$ has $k$ zero eigenvalues, one for each subgraph, and 
+$\lambda_{k+1}(L_{iso})$ is the smallest "fiedler value" among the subgraphs. 
+The fiedler value characterizes how tightly connected a graph (or in this case, 
+subgraph) is. The first $k$ eigenvectors of $L_{iso}$ produce exactly the 
+solution to the (fully constrained) ratio cut. 
+
+# Next steps
 
 1. RatioCut-SDP provides $Z \in \mathbb{R}^{n \times n}$, which, under the 
 full ratio cut constraints, should be $Z = H H^\top$. We saw that in example 1, 
 both RatioCut-SDP and $k$-means-SDP were able to find this exact $Z$, but 
 in examples 2 and 3, we needed a "rounding" step where we embedded $Z$ and 
-used Lloyd's algorithm to find a clustering. Lee and Strohmer are not 
+used Lloyd's algorithm to find a clustering. Ling and Strohmer are not 
 clear on how this should be handled, and neither are Peng and Wei. 
-2. Lee and Strohmer provide some criteria under which RatioCut-SDP is 
+2. Ling and Strohmer provide some criteria under which RatioCut-SDP is 
 guaranteed to find the optimal ratio cut clustering. So far, we haven't checked 
 if these criteria hold before running these experiments. 
 3. More examples ...
