@@ -342,6 +342,84 @@ The fiedler value characterizes how tightly connected a graph (or in this case,
 subgraph) is. The first $k$ eigenvectors of $L_{iso}$ produce exactly the 
 solution to the (fully constrained) ratio cut. 
 
+# Examples from the Paper
+
+### Concentric Circles
+
+Here, we will set $r_2 = \frac{3}{2}$, $r_1 = 1$, $n = 10$, $m = 15$. Theorem 
+4.1 says if 
+$\gamma \leq \bigg(2 + \frac{\log 4m}{\log \frac{m}{2 \pi}}\bigg)^{-1} 
+\bigg( \frac{\frac{n^2 \Delta^2}{16} - 1}{2} \bigg)$, 
+where $\Delta = \frac{r_2 - r_1}{r_1}$, then a graph constructed using the 
+heat kernel with $\sigma^2 = \frac{16 r_1^2 \gamma}{n^2 \log \frac{m}{2 \pi}}$ 
+will always be solved by RatioCut-SDP. Here, we will set $\gamma$ directly at 
+the boundary of the condition. 
+
+```{r}
+r1 <- 1
+r2 <- 1.5
+n <- 10
+m <- floor(n * r2 / r1)
+delta <- (r2 - r1) / r1
+gam <- (2 + log(4 * m) / log(m / 2 / pi)) ** -1 * 
+  ((n ** 2 + delta ** 2) / 16 - 1) / 2
+sigma2 <- 16 * r1 ** 2 * gam / n ** 2 / log(m / 2 / pi)
+k <- 2
+
+circles.df <- dplyr::bind_rows(
+  dplyr::tibble(x = r1 * cos(2 * pi * seq(n) / n),
+                y = r1 * sin(2 * pi * seq(n) / n),
+                z = 1),
+  dplyr::tibble(x = r2 * cos(2 * pi * seq(m) / m),
+                y = r2 * sin(2 * pi * seq(m) / m),
+                z = 2)
+)
+
+ggplot(circles.df) + 
+  coord_fixed() + 
+  geom_point(aes(x = x, y = y, colour = factor(z))) + 
+  theme(legend.position = 'none')
+
+W <- exp(-as.matrix(dist(circles.df)) ** 2 / 2 / sigma2)
+qgraph::qgraph(W, 
+               layout = 'spring',
+               groups = factor(circles.df$z))
+```
+
+Looking at the original data and the heat kernel graph, it seems like this 
+should be a very "easy" problem to solve. Sure enough, spectral clustering is 
+able to solve this very easily. In fact, the 1-dimensional Laplacian eigenmap 
+has the points in each cluster almost lying on top of one another:
+
+```{r}
+L <- graph.laplacian(W)
+L.dagger <- MASS::ginv(L)
+L.eigen <- eigen(L)
+H.hat <- L.eigen$vectors[, seq(n + m, n + m - k + 1)]
+clustering <- kmeans(H.hat, 2)$cluster
+
+ggplot() + 
+  coord_fixed() + 
+  xlim(1 / sqrt(n + m) -.01, 1 / sqrt(n + m) + .01) + 
+  labs(x = expression(u[0]),
+       y = expression(u[1])) + 
+  geom_point(aes(x = H.hat[, 1], 
+                 y = H.hat[, 2], 
+                 colour = factor(clustering))) + 
+  theme(legend.position = 'none')
+
+table(clustering, circles.df$z)
+```
+
+We can also see that $\sigma^2$ is a decreasing function of the sample sizes, 
+so we actually get better separation as we increase $n$ (and therefore $m$), 
+and spectral clustering is even more able to separate the two clusters. 
+
+This illustrates the main criticism of the Ling and Strohmer result: 
+the condition under which RatioCut-SDP is guaranteed to work is so stringent 
+that it only captures the "easy" problems. Perhaps this points to other methods 
+being guaranteed under this condition. 
+
 # Next steps
 
 1. RatioCut-SDP provides $Z \in \mathbb{R}^{n \times n}$, which, under the 
