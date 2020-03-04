@@ -1,0 +1,56 @@
+---
+title: 'Reformulation of the Ratio Cut Problem'
+output: pdf_document
+# output: html_document
+# geometry: "left=1cm,right=1cm,top=1cm,bottom=1.5cm"
+urlcolor: blue
+header-includes:
+- \usepackage{float}
+- \usepackage{amsmath}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      comment = NA, 
+                      warning = FALSE, 
+                      message = FALSE, 
+                      fig.pos = 'H', 
+                      fig.align = 'center', 
+                      fig.height = 5, 
+                      fig.width = 8, 
+                      fig.dpi = 300)
+options(xtable.comment = FALSE, 
+        xtable.table.placement = 'H')
+```
+
+\newcommand{\tr}{\text{Tr}}
+\newcommand{\diag}{\text{diag}}
+
+The ratio cut objective can be written as:
+
+$$\arg\min_H \tr(H^\top L H)$$
+
+where $L \in \mathbb{R}^{n \times n}$ is the unnormalized combinatorial graph
+Laplacian and $H \in \mathbb{R}^{n \times k}$ is a cluster assignment matrix.
+Since this problem is NP-hard, this is often "solved" via a continuous 
+relaxation which yields 
+$\hat{H} = \begin{bmatrix} u_1 \cdots u_k \end{bmatrix}$, the first $k$
+eigenvectors of $L$, followed by a "rounding step" in which $\hat{H}$ is 
+treated as an embedding of the graph and $k$-means is applied to the embedding 
+(via Lloyd's algorithm).
+
+Based on this, we can rewrite $L = U \Sigma^{-2} U^\top$ where $U$ is a matrix 
+of eigenvectors and $\Sigma^{-2}$ is a diagonal matrix of eigenvalues. Then 
+we can write:
+
+$$\begin{split}
+  \tr(H^\top L H) & = \tr(H^\top U \Sigma^{-2} U^\top H) \\
+  & = \tr \big( (H^\top U \Sigma^{-1}) (\Sigma^{-1} U^\top H) \big) \\
+  & = \tr \big( (\Sigma^{-1} U^\top H)^\top (\Sigma^{-1} U^\top H) \big) \\
+  & = || \Sigma^{-1} U^\top H ||_F^2
+\end{split}$$
+
+Note that we can rewrite the $k$-means objective (in the Laplacian eigenmap) 
+very similarly:
+
+$$\arg\max_H || \Sigma U^\top H ||_F^2$$
