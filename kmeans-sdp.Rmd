@@ -415,6 +415,20 @@ We can also see that $\sigma^2$ is a decreasing function of the sample sizes,
 so we actually get better separation as we increase $n$ (and therefore $m$), 
 and spectral clustering is even more able to separate the two clusters. 
 
+```{r}
+n <- seq(10, 100)
+m <- floor(n * r2 / r1)
+delta <- (r2 - r1) / r1
+gam <- (2 + log(4 * m) / log(m / 2 / pi)) ** -1 * 
+  ((n ** 2 + delta ** 2) / 16 - 1) / 2
+sigma2 <- 16 * r1 ** 2 * gam / n ** 2 / log(m / 2 / pi)
+
+ggplot() + 
+  geom_point(aes(x = n + m, y = sigma2)) + 
+  labs(x = 'number of points',
+       y = expression(sigma^2))
+```
+
 This illustrates the main criticism of the Ling and Strohmer result: 
 the condition under which RatioCut-SDP is guaranteed to work is so stringent 
 that it only captures the "easy" problems. Perhaps this points to other methods 
