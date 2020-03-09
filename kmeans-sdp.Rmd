@@ -401,8 +401,8 @@ clustering <- kmeans(H.hat, 2)$cluster
 ggplot() + 
   coord_fixed() + 
   xlim(1 / sqrt(n + m) -.01, 1 / sqrt(n + m) + .01) + 
-  labs(x = expression(u[0]),
-       y = expression(u[1])) + 
+  labs(x = expression(u[1]),
+       y = expression(u[2])) + 
   geom_point(aes(x = H.hat[, 1], 
                  y = H.hat[, 2], 
                  colour = factor(clustering))) + 
