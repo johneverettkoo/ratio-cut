@@ -463,7 +463,7 @@ formulation, $\arg\min_H \tr(H^\top L H)$.
 
 As a reminder, $H \in \mathbb{R}^{n \times k}$ is defined as:
 
-$$H = \begin{cases}
+$$h_{ij} = \begin{cases}
   n_j^{-1/2} & v_i \in C_j \\
   0 & \text{else}
 \end{cases}$$
