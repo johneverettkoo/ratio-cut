@@ -434,17 +434,125 @@ the condition under which RatioCut-SDP is guaranteed to work is so stringent
 that it only captures the "easy" problems. Perhaps this points to other methods 
 being guaranteed under this condition. 
 
-# Next steps
+# Alternative Formulation for $k = 2$
 
-1. RatioCut-SDP provides $Z \in \mathbb{R}^{n \times n}$, which, under the 
-full ratio cut constraints, should be $Z = H H^\top$. We saw that in example 1, 
-both RatioCut-SDP and $k$-means-SDP were able to find this exact $Z$, but 
-in examples 2 and 3, we needed a "rounding" step where we embedded $Z$ and 
-used Lloyd's algorithm to find a clustering. Ling and Strohmer are not 
-clear on how this should be handled, and neither are Peng and Wei. 
-2. Ling and Strohmer provide some criteria under which RatioCut-SDP is 
-guaranteed to find the optimal ratio cut clustering. So far, we haven't checked 
-if these criteria hold before running these experiments. 
-3. More examples ...
-4. Figure out when RatioCut-SDP and $k$-means SDP (using $L^\dagger$ as a 
-kernel matrix) coincide.
+In von Luxburg's tutorial, she proposes an alternative but equivalent 
+formulation of the ratio cut objective when $k = 2$:
+
+$$\begin{split}
+  \arg\min_f & \tr(f^\top L f) \\
+  \text{s.t. } & f \in \mathbb{R}^n \\
+  & f_i = \begin{cases} 
+    \sqrt{\frac{n_2}{n n_1}} & v_i \in C_1 \\
+    -\sqrt{\frac{n_1}{n n_2}} & v_i \in C_2
+  \end{cases}
+\end{split}$$
+
+Note that $f$ has the following properties:
+
+* $\sum f_i = 0$
+* $||f||_2 = 1$
+* $f^\top e = 0$
+
+Since this discrete optimization problem is NP-hard, von Luxburg's proposed 
+solution is to relax the problem by replacing the original constraint on $f$ 
+with its three observed properties. The solution to this is the Fiedler vector, 
+or eigenvector of $L$ that corresponds to its second smallest eigenvalue. This 
+induces the same embedding in $\mathbb{R}^1$ as in the arbitrary $k$ 
+formulation, $\arg\min_H \tr(H^\top L H)$. 
+
+As a reminder, $H \in \mathbb{R}^{n \times k}$ is defined as:
+
+$$H = \begin{cases}
+  n_j^{-1/2} & v_i \in C_j \\
+  0 & \text{else}
+\end{cases}$$
+
+The intuition behind the $\tr(H^\top L H)$ formulation is that if we replace 
+$L$ with $L_{iso}$, the combinatorial graph Laplacian of the graph with 
+$k$ disconnected parts, then the first $k$ eigenvectors of $L_{is}$ are of the form of $H$ (up to a permutation), and by the Rayleigh-Ritz theorem, this is 
+the global minimizer. 
+
+However, once we introduce edges that connect the disjoint subgraphs, the 
+eigenvectors of $L$ no longer take on this form, no matter how small the 
+inter-cluster edge weights are. A slightly more formal statement is:
+
+Let $\epsilon = \max W_{\delta}$, the largest inter-cluster edge weight (and 
+assume that $W$ describes a connected graph).  
+Then as long as $\epsilon > 0$, even as $\epsilon \to 0$, 
+$\begin{bmatrix} v_1 & \cdots & v_k \end{bmatrix} \not\to H$, where $v_j$ are 
+the $k$ eigenvectors of $L$ that correspond to its $k$ smallest eigenvalues. 
+
+But we do have the following (or I think we do---I don't have a proof):
+
+**Proposition**: Let $G_{iso} = (V, E_{iso})$ be a graph with two disconnected 
+subgraphs, with corresponding weight matrix $W_{iso}$. Then let $\epsilon > 0$
+and $G(\epsilon) = (V, E(\epsilon))$ be a connected graph constructed from 
+$G_{iso}$ such that $||D_\delta|| = \epsilon$ (where $D$ and $D_{iso}$ are the 
+diagonal degree matrices of $W$ and $W_{iso}$ and $D_\delta = D - D_{iso}$, as 
+described by Ling and Strohmer). Let $L(\epsilon)$ be the combinatorial graph 
+Laplacian of $G(\epsilon)$.  
+Then as $\epsilon \to 0$, the second eigenvector of $L(\epsilon)$, 
+$v_2 \to f$, where $f$ is of the form described above.
+
+In other words, no matter how close $L$ and $L_{iso}$ are to each other, the first two eigenvectors of $L$ will never approach the first two eigenvectors of
+$L_{iso}$, which is in part the intuition behind the justification for spectral
+clustering to approximate the ratio cut solution. Perhaps we should use the
+alternative formulation $\arg\min_f \tr(f^\top L f)$ instead.[^f]
+
+[^f]: Note: I'm still working on generalizing 
+$f \in \mathbb{R}^{n \times (k - 1)}$ for the arbitrary $k$ case. It's 
+straightforward to describe this as a simplex in $\mathbb{R}^{k-1}$ with 
+point masses on the vertices proportional to the cluster sizes such that the
+center of mass is the origin, but the actual closed form is taking some time to 
+figure out.
+
+## Alternative SDP Problem
+
+Based on this, we can try to form an alternative SDP problem using $f$ instead 
+of $H$:
+
+Let $\Phi = f f^\top$. Then we can observe:
+
+* $\Phi = \Phi^\top, \Phi \in \mathbb{R}^{n \times n}$
+* $\Phi e = f f^\top e = f 0 = \overrightarrow{0}$
+* $\tr(\Phi) = \tr(f f^\top) = \tr(f^\top f) = \tr(1) = 1$ (this should be 
+$k -1$ in the general case)
+* $\Phi$ is positive semidefinite
+    * $\Phi$ has rank 1 (or $k - 1$ in the general case)
+    * $\Phi f = f f^\top f = f 1 = f$
+* $\phi_{ij} = \begin{cases}
+  \frac{n_2}{n n_1} & v_i, v_j \in C_1 \\
+  \frac{n_1}{n n_2} & v_i, v_j \in C_2 \\
+  -\frac{1}{n} & \text{else}
+\end{cases}$
+
+Rewriting $\tr(f^\top L f) = \tr(L f f^\top) = \tr(L \Phi)$, we can state a 
+relaxation of the ratio cut problem as:
+
+$$\begin{split}
+  \arg\min_\Phi & \tr(L \Phi) \\
+  \text{s.t. } & \Phi \text{ is PSD} \\
+  & \Phi e = 0 \\
+  & \tr(\Phi) = 1 \\
+  & \Phi \geq -\frac{1}{n} \text{ element-wise}
+\end{split}$$
+
+... with the hope that this will let us relax the optimality criterion 
+from Ling and Strohmer.
+
+## Proximities
+
+We noted that as $\epsilon \to 0$ (i.e., $L \to L_{iso}$ while keeping the 
+graph generating $L$ connected), $v_1$, the Fiedler vector of $L$, approaches
+$f$. Then it would be intuitive to believe that $||v_2 - f|| \leq g(\epsilon)$
+for some monotone increasing function $g$. We saw previously that performing 
+$2$-means clustering on $v_2$ (treating it as an embedding in $\mathbb{R}^1$) 
+is equivalent to finding $n_1$ and $n_2$ such that $||v_2 - f||$ is minimized. 
+Furthermore, we saw that the $2$-means clustering solution is not equivalent 
+to the ratio cut solution. So minimizing $||v_2 - f||$ does not give us the 
+ratio cut solution in the general case. However, if we can put an upper bound 
+on $||v_2 - f||$, then perhaps we can define criteria for which the $2$-means 
+clustering solution on $v_2$ is equivalent to the ratio cut solution (and 
+hopefully this will be looser than the Ling-Strohmer criterion for 
+RatioCut-SDP).
