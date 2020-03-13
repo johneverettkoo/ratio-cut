@@ -544,7 +544,7 @@ from Ling and Strohmer.
 ## Proximities
 
 We noted that as $\epsilon \to 0$ (i.e., $L \to L_{iso}$ while keeping the 
-graph generating $L$ connected), $v_1$, the Fiedler vector of $L$, approaches
+graph generating $L$ connected), $v_2$, the Fiedler vector of $L$, approaches
 $f$. Then it would be intuitive to believe that $||v_2 - f|| \leq g(\epsilon)$
 for some monotone increasing function $g$. We saw previously that performing 
 $2$-means clustering on $v_2$ (treating it as an embedding in $\mathbb{R}^1$) 
