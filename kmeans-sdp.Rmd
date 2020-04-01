@@ -507,6 +507,79 @@ point masses on the vertices proportional to the cluster sizes such that the
 center of mass is the origin, but the actual closed form is taking some time to 
 figure out.
 
+### Example
+
+Let $G_{iso}$ be a graph with just four vertices and two edges of unit weight 
+such that there is an edge between vertices $1$ and $2$ and an edge between 
+vertices $3$ and $4$:
+
+```{r, fig.height = 1, fig.width = 1}
+W.iso <- rbind(c(0, 1, 0, 0), 
+               c(1, 0, 0, 0),
+               c(0, 0, 0, 1), 
+               c(0, 0, 1, 0))
+qgraph::qgraph(W.iso)
+```
+
+Let $\epsilon > 0$ and $G_{\epsilon}$ be a graph constructed from $G_{iso}$ 
+such that there is an edge between vertices 3 and 4 of weight $\epsilon$ (for 
+the sake of making the optimal ratio cut solution be $\{\{1, 2\}, \{3, 4\}\}$, 
+we can let $\epsilon < 1$):
+
+```{r, fig.height = 1, fig.width = 1}
+eps <- .1
+W <- W.iso
+W[2, 3] <- W[3, 2] <- eps
+qgraph::qgraph(W)
+```
+
+Let $W_{iso}$ be the edge weight matrix of $G_{iso}$ and $L_{iso}$ be its 
+combinatorial graph Laplacian. Then the first two eigenvalues of $L_{iso}$ 
+are $\lambda_1(L_{iso}) = \lambda_2(L_{iso}) = 0$ and the corresponding 
+eigenvectors are 
+$H = \begin{bmatrix}
+  1 / \sqrt{2} & 0 \\
+  1 / \sqrt{2} & 0 \\
+  0 & 1 / \sqrt{2} \\
+  0 & 1 / \sqrt{2}
+\end{bmatrix}$. 
+
+On the other hand, let $W_{\epsilon}$ and $L_\epsilon$ be the edge weight 
+matrix and combinatorial graph Laplacian of $G_\epsilon$. Then the first 
+eigenvalue of $L_\epsilon$ is $\lambda_1(L_\epsilon) = 0$ and the second 
+eigenvalue is $\lambda_2(L_\epsilon) = 1 + \epsilon - \sqrt{1 + \epsilon^2}$.
+The first eigenvector of $L_\epsilon$ is $v_1(L_\epsilon) = e / 2$ while 
+the second is 
+$v_2(L_\epsilon) = \frac{1}{\sqrt{4 + 4 \epsilon^2}} \begin{bmatrix}
+  1 \\
+  -\epsilon + \sqrt{1 + \epsilon^2} \\
+  \epsilon - \sqrt{1 + \epsilon^2} \\
+  -1
+\end{bmatrix}$.
+
+Taking the limit as $\epsilon \to 0$, we get:
+
+* $v_1(L_\epsilon) = e / 2$ (doesn't depend on $\epsilon$)
+* $v_2(L_\epsilon) \to 
+\begin{bmatrix} 1/2 & 1/2 & -1/2 & -1/2 \end{bmatrix}^\top$
+
+So we can see that while $\lim\limits_{\epsilon \to 0} G_\epsilon = G_{iso}$ 
+in some sense, 
+$\lim\limits_{\epsilon \to 0} 
+\begin{bmatrix} v_1(L_\epsilon) & v_2(L_\epsilon) \end{bmatrix} \not\to
+\begin{bmatrix} v_1(L_{iso}) & v_2(L_{iso}) \end{bmatrix}$.
+
+In fact, if we define $f_\epsilon$ as previously specified (and according to 
+von Luxburg's method for $k = 2$), we get 
+$f_\epsilon = \begin{bmatrix} 1/2 & 1/2 & -1/2 & -1/2 \end{bmatrix}^\top$, so
+$\lim\limits_{\epsilon \to 0} v_2(L_\epsilon) = f_\epsilon$.
+
+Another point that might be of interest is 
+$\lim\limits_{\epsilon \to 0} \lambda_2(L_\epsilon) = 0 = \lambda_2(L_{iso})$, 
+so while the second eigenvector of $L_\epsilon$ does not converge to the second 
+eigenvector of $L_{iso}$, the second eigenvalue of $L_\epsilon$ does converge 
+to the second eigenvalue of $L_{iso}$.
+
 ## Alternative SDP Problem
 
 Based on this, we can try to form an alternative SDP problem using $f$ instead 
