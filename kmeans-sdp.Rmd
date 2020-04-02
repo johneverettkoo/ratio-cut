@@ -571,8 +571,8 @@ $\lim\limits_{\epsilon \to 0}
 
 In fact, if we define $f_\epsilon$ as previously specified (and according to 
 von Luxburg's method for $k = 2$), we get 
-$f_\epsilon = \begin{bmatrix} 1/2 & 1/2 & -1/2 & -1/2 \end{bmatrix}^\top$, so
-$\lim\limits_{\epsilon \to 0} v_2(L_\epsilon) = f_\epsilon$.
+$f = \begin{bmatrix} 1/2 & 1/2 & -1/2 & -1/2 \end{bmatrix}^\top$, so
+$\lim\limits_{\epsilon \to 0} v_2(L_\epsilon) = f$.
 
 Another point that might be of interest is 
 $\lim\limits_{\epsilon \to 0} \lambda_2(L_\epsilon) = 0 = \lambda_2(L_{iso})$, 
