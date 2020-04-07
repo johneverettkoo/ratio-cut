@@ -618,7 +618,8 @@ from Ling and Strohmer.
 
 We noted that as $\epsilon \to 0$ (i.e., $L \to L_{iso}$ while keeping the 
 graph generating $L$ connected), $v_2$, the Fiedler vector of $L$, approaches
-$f$. Then it would be intuitive to believe that $||v_2 - f|| \leq g(\epsilon)$
+$f$. Then it would be intuitive to believe that 
+$||v_2 - f|| \leq g(G_\epsilon)$
 for some monotone increasing function $g$. We saw previously that performing 
 $2$-means clustering on $v_2$ (treating it as an embedding in $\mathbb{R}^1$) 
 is equivalent to finding $n_1$ and $n_2$ such that $||v_2 - f||$ is minimized. 
@@ -628,4 +629,7 @@ ratio cut solution in the general case. However, if we can put an upper bound
 on $||v_2 - f||$, then perhaps we can define criteria for which the $2$-means 
 clustering solution on $v_2$ is equivalent to the ratio cut solution (and 
 hopefully this will be looser than the Ling-Strohmer criterion for 
-RatioCut-SDP).
+RatioCut-SDP). In addition, if we can characterize $g(G_\epsilon)$ in some 
+way, we can perhaps say how "correct" the spectral clustering approximation 
+to ratio cut is depending on $G_\epsilon$, since minimizing $||v_2 - f||$ is
+equivalent to the $k$-means objective for $f$. 
