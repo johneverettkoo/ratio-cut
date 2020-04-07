@@ -522,7 +522,7 @@ qgraph::qgraph(W.iso)
 ```
 
 Let $\epsilon > 0$ and $G_{\epsilon}$ be a graph constructed from $G_{iso}$ 
-such that there is an edge between vertices 3 and 4 of weight $\epsilon$ (for 
+such that there is an edge between vertices 2 and 3 of weight $\epsilon$ (for 
 the sake of making the optimal ratio cut solution be $\{\{1, 2\}, \{3, 4\}\}$, 
 we can let $\epsilon < 1$):
 
