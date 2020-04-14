@@ -296,7 +296,7 @@ $$\begin{split}
   \text{s.t. } & \tr(Z) = k \\
   & Z e = e \\
   & Z \geq 0 \text{ element-wise} \\
-  & Z \text{is positive semidefinite}
+  & Z \text{ is positive semidefinite}
 \end{split}$$
 
 
